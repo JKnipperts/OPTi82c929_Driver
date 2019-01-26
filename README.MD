@@ -26,20 +26,20 @@ during the late 90's and early 2000s.
 
 My driver consists of the following programs:
 
-# SETUP.EXE
+### SETUP.EXE
 Allows the comfortable configuration of the sound card. 
 On the first screen you can set the default configuration for Sound Blaster, 
 WSS, the MPU401 midi interface and a CD-ROM drive connected to the card.
 
-# 929INIT.EXE
+### 929INIT.EXE
 This program initializes the sound card with the settings stored in the setup. 
 The mode of the sound card can also be easily changed from the command line.
 
-# MIXER.EXE
+### MIXER.EXE
 Allows you to adjust the volume, configure the sound card's inputs for 
 recording, and perform a sound check.
 
-# SBFIX.COM
+### SBFIX.COM
 A small, memory-resident program that forces the sound card to output in stereo
 in Sound Blaster mode. 
 Some games have problems with stereo output with OPTi929 soundcards, this small
