@@ -2,7 +2,7 @@
 ******************************************************************************
 Low Level Initialization for Sound Cards with OPTi 82C929 and AD1848K Chipsets
 ******************************************************************************
-Version:    1.0 - Englisch
+Version:    1.0 
 Date   :    03.01.2019
 Author :    Jan Knipperts
 ******************************************************************************}
@@ -80,30 +80,30 @@ begin
   textcolor(7);
   textbackground(0);
   writeln('');
-  write('Ú');
+  write('Ãš');
   for xc := 2 to 79 do
   begin
     gotoxy(xc,gety);
-    write('Ä');
+    write('Ã„');
   end;
-  write('¿');
-  write('³');
+  write('Â¿');
+  write('Â³');
   gotoxy(40-(length(title) div 2),gety);
   write(title);
   gotoxy(80,gety);
-  write('³');
-  write('³');
+  write('Â³');
+  write('Â³');
   gotoxy(40-(length(copyright) div 2),gety);
   write(copyright);
   gotoxy(80,gety);
-  write('³');
-  write('À');
+  write('Â³');
+  write('Ã€');
   for xc := 2 to 79 do
   begin
     gotoxy(xc,gety);
-    write('Ä');
+    write('Ã„');
   end;
-  write('Ù');
+  write('Ã™');
 end;
 
 
