@@ -46,3 +46,5 @@ Some games have problems with stereo output with OPTi929 soundcards, this small
 program can help to fix this issue.  Just run it before starting the game. 
 
 
+![Alt text](https://github.com/JKnipperts/Make-a-line/blob/master/Gameplay.jpg?raw=true "Title")
+
