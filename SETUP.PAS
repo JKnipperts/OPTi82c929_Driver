@@ -2,7 +2,7 @@
    Setup for my OPTi 82C929 Soundcard low level driver
 *****************************************************************************
 Version:    1.01
-Date   :    24.01.2018
+Date   :    24.01.2019
 Author :    Jan Knipperts   (Dragonsphere /DOSReloaded)
 
 *****************************************************************************}
@@ -323,8 +323,8 @@ end;
   c := 1;
   while (name[c] = ' ') and (c <= length(name)) do inc(c);
   putchar(x+(c-1),y,name[c],4,7);
-  for c := x+1 to x+length(name) do fastwrite(c,y+1,col,1, 'ß');
-  fastwrite(x+length(name),y,col,1, 'Ü');
+  for c := x+1 to x+length(name) do fastwrite(c,y+1,col,1, 'ÃŸ');
+  fastwrite(x+length(name),y,col,1, 'Ãœ');
  end;
 
  Procedure Wait_for_Mousebutton;
@@ -435,9 +435,9 @@ begin
   Cfix        := 0;   {We assume an Analog Devices codec}
 
   CDTYPE      := $FF; {CD-ROm off}
-  CDBASE      := $340; {Port fr CD-ROM}
-  CDIRQ       := $FF; {IRQ fr CD-ROM}
-  CDDMA       := 3;   {DMA fr CD-ROM}
+  CDBASE      := $340; {Port fÂr CD-ROM}
+  CDIRQ       := $FF; {IRQ fÂr CD-ROM}
+  CDDMA       := 3;   {DMA fÂr CD-ROM}
 
   SBBASE      := $220;   {SB Port}
   SBIRQ       := 5;   {SB IRQ}
@@ -453,7 +453,7 @@ begin
  { WSSDMA2     := $FF;  {WSS capture DMA off}
   WSSIRQ      := $FF;  {WSS Auto IRQ}
 
-  GPMODE      := 1;   {Game Port Timer.  0 fr Extern, 1 fr Intern}
+  GPMODE      := 1;   {Game Port Timer.  0 fÂr Extern, 1 fÂr Intern}
   OUTMX       := 1;   {Timing mode OPL3SCn}
 
   GPEN        := 1;   {GamePort enabled}
@@ -595,9 +595,9 @@ begin
 
  InitMenuScreen(title);
  Window(4,3,77,23,15,1,true);
- putchar(40,3,'Ñ',15,1);
+ putchar(40,3,'Ã‘',15,1);
  for cnt := 4 to 19 do
- putchar(40,cnt,'³',15,1);
+ putchar(40,cnt,'Â³',15,1);
 
  fastwrite(9,4,14,1,'Sound Blaster configuration');
  fastwrite(9,6,15,1,'Address:');
@@ -624,7 +624,7 @@ begin
  Drawselector(58,8,WSS_DMA[wsstext.dma]);
 
  HLine(12);
- putchar(40,12,'Å',15,1);
+ putchar(40,12,'Ã…',15,1);
 
  fastwrite(9,13,14,1,'MPU401 configuration');
  fastwrite(9,15,15,1,'Enable MPU401 [ ]');
@@ -663,8 +663,8 @@ begin
 
 
  HLine(20);
- putchar(40,20,'Å',15,1);
- putchar(40,20,'Á',15,1);
+ putchar(40,20,'Ã…',15,1);
+ putchar(40,20,'Ã',15,1);
  Button(13,21,'Advanced Options',false);
  Button(34,21,'Test Settings',false);
  Button(52,21,'Save and quit',false);
@@ -1256,7 +1256,7 @@ begin
   if filesize(f) > 65535 then
   begin
    writeln('');
-   writeln('ERROR: Autoexec.bat ist zu groá!');
+   writeln('ERROR: Autoexec.bat ist zu groÃ¡!');
    writeln('');
    close(f);
    halt(1);
@@ -1343,11 +1343,11 @@ begin
 
    if length(s) >= length(newblaster) then
    begin
-    for dummy := 1 to length(s) do       {Alten Eintrag l”schen}
+    for dummy := 1 to length(s) do       {Alten Eintrag lÂ”schen}
     begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := 0;
     end;
-    for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfgen}
+    for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfÂgen}
     begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
     end;
@@ -1360,7 +1360,7 @@ begin
    else
    begin
      move(ptr(seg(p^),ofs(p^)+bpos+length(s))^,ptr(seg(p^),ofs(p^)+bpos+length(newblaster))^,size-(bpos+length(s)));
-     for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfgen}
+     for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfÂgen}
      begin
       mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
      end;
@@ -1388,7 +1388,7 @@ begin
         ptr(seg(p^),ofs(p^)+(bpos+length(newblaster)))^,
         size-bpos);
 
-   for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfgen}
+   for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfÂgen}
    begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
    end;
@@ -1419,7 +1419,7 @@ begin
         ptr(seg(p^),ofs(p^)+(cpos+length(initstr)))^,
         size-cpos);
 
-   for dummy := 1 to length(initstr) do       {Neuen Eintrag einfgen}
+   for dummy := 1 to length(initstr) do       {Neuen Eintrag einfÂgen}
    begin
      mem[seg(p^):ofs(p^)+cpos+(dummy-1)] := ord(initstr[dummy]);
    end;
