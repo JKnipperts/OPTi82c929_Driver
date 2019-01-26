@@ -1,6 +1,6 @@
 {
  Program: Unit for replay of "Easy Adlib" OPL-2 Sound modules
- Author : Jan Knipperts (Abaddon /CodeBreaker)
+ Author : Jan Knipperts 
  Ver.   : 1.0
  Date   : 26.02.2000}
 
@@ -90,8 +90,8 @@ implementation
        ID           : array[1..3] of char; {BMF}
        Filever      : array[1..3] of char; {1.1}
        ok           : integer;
-       iflag        : array[1..4] of byte;  {flag 32-Bit fr instrumente}
-       tflag        : array[1..4] of byte;  {flag fr Tracks}
+       iflag        : array[1..4] of byte;  {flag 32-Bit fÂr instrumente}
+       tflag        : array[1..4] of byte;  {flag fÂr Tracks}
        bc           : word;
        inst         : array[1..32] of bmfinst;
        defaultvoice : bmfinst;
