@@ -45,6 +45,8 @@ in Sound Blaster mode.
 Some games have problems with stereo output with OPTi929 soundcards, this small
 program can help to fix this issue.  Just run it before starting the game. 
 
-
+The Setup:
 ![Alt text](https://github.com/JKnipperts/OPTi82c929_Driver/blob/master/screen_001.png?raw=true "Title")
+
+The Mixer:
 ![Alt text](https://github.com/JKnipperts/OPTi82c929_Driver/blob/master/screen_002.png?raw=true "Title")
