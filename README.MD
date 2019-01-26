@@ -19,8 +19,9 @@ all possible settings and configure his sound card optimally.
 
 Greetings and thanks go to the community of https://dosreloaded.de. 
 
-The driver is written in Pascal and inline assembly and includes units for 
-FM sound, fast Texmode handling, sound blaster stuff and more that might be usefull for others.
+The driver is written in Pascal and inline assembly and uses some units for 
+FM sound, fast screen handling in textmode, sound blaster stuff and more that I have written 
+during the late 90's and early 2000s.
 
 
 My driver consists of the following programs:
