@@ -1,5 +1,7 @@
-Optimized MAD16 PRO (OPTi 82c929) Sound controller initailisation
-2018/2019 by Jan Knipperts (Dragonsphere /DOSReloaded).
+++Optimized MAD16 PRO (OPTi 82c929) Sound controller initailisation++
+2018/2019 by Jan Knipperts 
+
+Join me on a real oldschool / retro project:
 
 Sound cards with a sound controller of type 82c929 (MAD16 PRO) were widely used
 in the mid 90s. These cards support the Windows Sound System mode, 
@@ -15,6 +17,12 @@ cards to work properly.
 I therefore decided to program my own DOS driver, which lets the user change 
 all possible settings and configure his sound card optimally.
 
+Greetings and thanks go to the community of https://dosreloaded.de. 
+
+The driver is written in Pascal and inline assembly and includes units for 
+FM sound, fast Texmode handling, sound blaster stuff and more that might be usefull for others.
+
+
 My driver consists of the following programs:
 
 SETUP.EXE
@@ -22,64 +30,13 @@ Allows the comfortable configuration of the sound card.
 On the first screen you can set the default configuration for Sound Blaster, 
 WSS, the MPU401 midi interface and a CD-ROM drive connected to the card.
 
-The "Advances Options" button opens another screen with settings that affect 
-the operation of the sound chips and compatibility with the Sound Blaster 
-standard.
-
-Warning:
-SOME SETTINGS CAN BE MADE HERE THAT ARE OUTSIDE OF ANY SPECIFICATION! 
-USE AT YOUR OWN RISK! I DO NOT ASSUME ANY LIABILITY FOR POSSIBLE DAMAGES 
-TO HARDWARE OR SOFTWARE CAUSED BY THE USE OF MY PROGRAMS.
-
-Tip:
-If you have problems with the sound output in games that use the Sound Blaster 
-mode of the card, try different settings at "Dfault frequency for SB mode" and 
-set "Automatic Volume Control" to "Disable".
-
-The button "Test Settings" starts a quick check of the settings and shows you 
-whether the sound card works with the current settings or where problems might 
-occur.
-
-Save and Quit" saves the settings and quits the program. You will be asked if 
-you want to adjust the AUTOEXEC.BAT. If you answer with "Yes", the SET BLASTER 
-variable will be adjusted to the current Sound Blaster settings and a call of 
-the driver will be entered, so that it will be executed every time the computer
-is started.
-
-If you want to quit the program without saving any changes, just press ESC.
-
-Keyboard control:
-By default the setup is controlled with the mouse. If no mouse is connected or 
-no mouse driver is loaded, you can also control the program with the keyboard.
-Use the cursor keys to select the individual options. With + and - you can 
-select the individual setting options. Alternatively you can press Enter or the
-space bar.
-
-You can select the buttons either with the cursor keys, which are called with 
-the respective initial letters (A,T,S (or also Q for Quit) ).
-The keyboard control can also be activated with the parameter "/K" at program 
-start if a mouse is available.
-
 929INIT.EXE
 This program initializes the sound card with the settings stored in the setup. 
 The mode of the sound card can also be easily changed from the command line.
-The /INIT parameter initializes the sound card, /SB or /WSS sets the card to 
-the respective mode and /INFO provides information on the current sound 
-controller settings.
 
 MIXER.EXE
 Allows you to adjust the volume, configure the sound card's inputs for 
 recording, and perform a sound check.
-The control is simply done with the mouse. If no mouse is available, you can 
-select a volume or option with the cursor keys. 
-With +/- or Enter or the space bar you can adjust the volume or activate or 
-deactivate settings.
-The volume can also be changed from the command line:
-For example, "MIXER.EXE DAC 60 80" sets the playback volume of samples 
-(DAC output) for the left channel to 60% and for the right channel to 80%.
-
-With the parameter "/?" you get an overview of the possible command line 
-parameters.
 
 SBFIX.COM
 A small, memory-resident program that forces the sound card to output in stereo
@@ -87,5 +44,4 @@ in Sound Blaster mode.
 Some games have problems with stereo output with OPTi929 soundcards, this small
 program can help to fix this issue.  Just run it before starting the game. 
 
-Regards
-Jan (01/26/2019)
+
