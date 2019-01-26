@@ -1,5 +1,5 @@
 ## Optimized MAD16 PRO (OPTi 82c929) Sound controller initailisation
-2018/2019 by Jan Knipperts 
+
 
 Join me on a real oldschool / retro project:
 
