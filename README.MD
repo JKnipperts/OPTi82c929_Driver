@@ -33,7 +33,8 @@ Just run it before starting the game.
 ## The source code
 The actual driver is written in Borland Pascal with use of inline assembler. SBFIX is written in pure x86 Assembler code, use NASM to compile it.
 
-The code to interact with the hardware is contained in these two files:
+
+The main code to interact with the hardware is contained in these two files:
 
 ### OPTI929.PAS 
 This file contains all functions to initialize and (re)configure the OPTi 82C929 sound controller.
@@ -52,6 +53,9 @@ Player for *.bmf Adlib tunes
 
 ### MPU.PAS 
 Code to interact with Roland MPU 401 Midi interface
+
+### SBPRO.PAS
+All necessary code to interact with an Sound BLaster Pro compatible card and it's mixer.
 
 ### TEXTMODE.PAS 
 Fast drawing routines for the 80x25 Textmode. Replacement of Borlands CRT unit.
