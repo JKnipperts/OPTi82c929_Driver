@@ -64,4 +64,11 @@ Fast drawing routines for the 80x25 Textmode. Replacement of Borlands CRT unit.
 Some misc routines. For example bit manipulation, timing, displaying hex numbers...
 
 
+## Some Screenshots
+### The Setup
+![Alt text](https://github.com/JKnipperts/OPTi82c929_Driver/blob/master/screen_001.png?raw=true "Title")
+
+### The Mixer
+![Alt text](https://github.com/JKnipperts/OPTi82c929_Driver/blob/master/screen_002.png?raw=true "Title")
+
 Thanks and greetings go to the community of https://dosreloaded.de  With their feedback and suggestions for improvement, they have always made me continue and improve this project. Without the support from the forum, this would probably have been just a simple attempt to initialize a soundcard with my own program.
