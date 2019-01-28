@@ -8,9 +8,7 @@ Back in the day many manufacturers began to focus on driver support for Windows,
 I therefore decided to program my own DOS driver, which lets the user change all possible settings and configure his sound card optimally.
 
 
-
-
-My driver consists of four programs:
+The driver consists of four main programs:
 
 ### SETUP
 Allows the comfortable configuration of the sound card. 
@@ -40,10 +38,12 @@ The main code to interact with the hardware is contained in these two files:
 This file contains all functions to initialize and (re)configure the OPTi 82C929 sound controller.
 
 ### AD1848.PAS 
-Here you can find all the code needed to interact with an Analog Devices AD1848 compatible codec. 
+Here you can find all the code needed to interact with an Analog Devices AD1848 compatible codec.  
 This unit can be used to play Audiodata through the Windows Sound System (see the use in MIXER.PAS for an example). 
 
-For FM sound, screen handling in textmode, Sound Blaster and Midi stuff etc. I used old source code that I originally wrote in the late 90s and early 2000s.
+The datasheets for the OPTi 82c929 and it's supported codecs can be found in the DOCS folder.
+
+For FM sound, screen handling in textmode, Sound Blaster and Midi stuff etc. I mostly used old source code that I originally wrote in the late 90s and early 2000s.
 
 ### OPL.PAS 
 Code to interact with  Yamaha YM 3812/ YMF262 (OPL2/OPL3) Soundchips
