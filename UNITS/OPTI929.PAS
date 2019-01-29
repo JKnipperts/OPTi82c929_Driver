@@ -43,15 +43,15 @@ OPTI929config       = record
   powerdwn    : byte;   {Stromsparmodus}
   fmclk       : byte;   {OPL 2 oder 3 Taktung}
   silence     : byte;   {Soundausgabe an/aus}
-  Cfix        : byte;   {Delay fix f걊 Crystal Chips}
+  Cfix        : byte;   {Delay fix f혖r Crystal Chips}
   shprotect   : byte;   {Shadow Register protection}
   access      : byte;   {Zugriff auf Codec auch im SB Modus?}
 
   CDTYPE      : byte;
-  CDBASE      : word;   {Port f걊 CD-ROM}
+  CDBASE      : word;   {Port f혖r CD-ROM}
   OPL         : byte;   {OPL 3/4}
-  CDIRQ       : byte;   {IRQ f걊 CD-ROM}
-  CDDMA       : byte;   {DMA f걊 CD-ROM}
+  CDIRQ       : byte;   {IRQ f혖r CD-ROM}
+  CDDMA       : byte;   {DMA f혖r CD-ROM}
 
   SBBase      : word;   {SB Port}
   SBIRQ       : byte;   {SB IRQ}
@@ -67,7 +67,7 @@ OPTI929config       = record
   WSSIRQ      : byte;   {WSS IRQ}
 
   GPEN        : byte;   {GamePort an/aus}
-  GPMode      : byte;   {Game Port Timer.  0 f걊 Extern, 1 f걊 Intern}
+  GPMode      : byte;   {Game Port Timer.  0 f혖r Extern, 1 f혖r Intern}
   GPOUT       : byte;   {General purpose output}
   OUTMX       : byte;   {Mix Midi / gameport outputs}
 
@@ -123,7 +123,7 @@ Procedure Silence929(on : boolean);
 {Mute/unmute all audio}
 
 Procedure SBMixer(on : boolean);
-{Enable/Disbale automatic volume control in SB Mode}
+{Enable/Disbale Mixer emulation and automatic volume control in SB Mode}
 
 Procedure SBADPCM(on : boolean);
 {Enable/Disbale ADPC decompression feature}
@@ -176,22 +176,17 @@ begin
  mc1data := read929(MC1_PORT);
 
  if (getbit(mc1data,4) = 0) and (getbit(mc1data,5) = 0) then
- begin
   Base := $530;
- end;
- if (getbit(mc1data,4) = 1) and (getbit(mc1data,5) = 0) then
- begin
-  Base := $E80;
- end;
- if (getbit(mc1data,4) = 0) and (getbit(mc1data,5) = 1) then
- begin
-  Base := $F40;
- end;
- if (getbit(mc1data,4) = 1) and (getbit(mc1data,5) = 1) then
- begin
-  Base := $604;
- end;
 
+ if (getbit(mc1data,4) = 1) and (getbit(mc1data,5) = 0) then
+  Base := $E80;
+ 
+ if (getbit(mc1data,4) = 0) and (getbit(mc1data,5) = 1) then
+  Base := $F40;
+ 
+ if (getbit(mc1data,4) = 1) and (getbit(mc1data,5) = 1) then
+  Base := $604;
+ 
  CODECBase := base;
 end;
 
@@ -201,14 +196,11 @@ Function Detect929 : boolean;
 var tmp, tmp2,tmp3, bit : byte;
     i, portnum     : word;
 begin
-{ Check that reading a register doesn't return bus float (0xff)
-  when the card is accessed using password. This may fail in case
-  the card is in low power mode. Normally at least the power saving
-  mode bit should be 0.}
+{ First we check if we can read from a register with the password}
 
   tmp := read929(MC1_PORT);
 
-   if (tmp = $FF) then
+if (tmp = $FF) then {Unfortunately we get only bus float... }
    begin
         Detect929 := false;
         exit;
@@ -223,10 +215,13 @@ begin
     Detect929 := false;
     exit;
    end;
+   
+   {First hurdle cleared, password is correct and the chip works as expected}
 
+{Finally let's check the revisionid bits in register MC3. Just to be save}
    tmp3 := read929(MC3_PORT);
    {Bits 0 and 1 store the ID of the 82C929.
-    Should be "10"}
+    Should be "10" for 82C929A}
 
    if (getbit(tmp3,0) <> 0) and (getbit(tmp3,1) <> 1) then
    begin
@@ -276,12 +271,14 @@ end;
 
 
 Procedure SetWSSMode(cfg : OPTI929config);
+{Sets the Controller in Windows Sound System mode using the configuration provided in "cfg"}
+
 var mc1data,
     mc2data,
     mc3data,
     mc4data,
     mc5data,
-    mc6data  : byte;
+    mc6data  : byte;    {Variables for the register values}
 
 
 begin
@@ -354,14 +351,10 @@ begin
   end;
 
  if cfg.gpen = 1 then
- begin
-  set_bit(mc1data,0,false); {1 means off here}
- end
+  set_bit(mc1data,0,false) {1 means off here}
  else
- begin
   set_bit(mc1data,0,true);
- end;
-
+ 
  mc2data := 0;
 
  case cfg.CDBASE of
@@ -458,7 +451,7 @@ end;
     set_bit(mc2data,2,false);
   end;
 
- $FF:                           {CD-ROM OFF}
+ $FF:                           {CD-ROM support OFF}
   begin
     set_bit(mc2data,4,false);
     set_bit(mc2data,3,false);
@@ -549,7 +542,7 @@ end;
  if cfg.fmclk = 2 then set_bit(mc4data,3,true);
 
 
- set_bit(mc5data,7,true);     {reserved bits}
+ set_bit(mc5data,7,true);     {set reserved bits of MC5}
  set_bit(mc5data,6,false);
  set_bit(mc5data,2,true);
  set_bit(mc5data,0,true);
@@ -563,11 +556,10 @@ end;
 
  mc6data := 0;
 
- {Reserved bits of byte 6}
+ {Set the reserved bits of byte 6}
  set_bit(mc6data,2,false);
  set_bit(mc6data,1,true);
  set_bit(mc6data,0,true);
-
 
 
  if cfg.mpu401 = 1 then  set_bit(mc6data,7,true);
@@ -625,26 +617,33 @@ end;
 
  end;
 
-
+{Write new values to the chip}
  write929(MC1_PORT,mc1data);
  write929(MC2_PORT,mc2data);
  write929(MC3_PORT,mc3data);
  write929(MC4_PORT,mc4data);
  write929(MC5_PORT,mc5data);
  write929(MC6_PORT,mc6data);
- SetupWSSPort(cfg);
+ 
+ {Calculate addresses for codec access}
  CODEC.WSSPort := cfg.WSSBase;
  CODEC.ADDR    := cfg.WSSBase+4;
  CODEC.DATA    := cfg.WSSBase+5;
  CODEC.STATUS  := cfg.WSSBase+6;
  CODEC.PIO     := cfg.WSSBase+7;
+ 
+ {Set up the WSS main I/O port}
+ SetupWSSPort(cfg);
 end;
 
 
 
 
 Function SBMode : boolean;
-var mc1data : byte;
+{Is the controller in Sound Blaster mode?}
+
+var 
+  mc1data : byte;
 begin
  mc1data := read929(MC1_PORT);
 
@@ -660,6 +659,8 @@ begin
 end;
 
 Procedure GetCFG(var cfg : OPTI929config);
+{Reads all readable register values from the controller and stores actual configuration in "cfg"}
+
 var mc1data,
     mc2data,
     mc3data,
@@ -1078,6 +1079,9 @@ end;
 
 
 Procedure SetSBMode(cfg : OPTI929config);
+{Sets the controller to Sound Blaster mode using the configuration provided in "cfg"}
+
+
 var mc1data,
     mc2data,
     mc3data,
@@ -1091,7 +1095,7 @@ begin
  mc1data := 0;
  set_bit(mc1data,7,false); {set SB Pro mode}
  if cfg.powerdwn = 1 then set_bit(mc1data,6,true); {powerdown mode}
- set_bit(mc1data,4,false); {WSS Base - not used here}
+ set_bit(mc1data,4,false); {WSS Base is not used this time}
  set_bit(mc1data,5,false);
 
 
@@ -1320,14 +1324,14 @@ end;
  end;
 
  if cfg.fmap = 1 then set_bit(mc3data,3,true);
- if cfg.gpmode = 1 then set_bit(mc3data,1,true);    {On 82c924 this is write EPROM!!!}
+ if cfg.gpmode = 1 then set_bit(mc3data,1,true);    
  if cfg.sbbase = $240 then set_bit(mc3data,2,true);
 
  mc4data := 0;
  if cfg.adpcm = 1 then set_bit(mc4data,7,true);
  if cfg.gpout > 0 then set_bit(mc4data,6,true);
  set_bit(mc4data,5,true); {Time Out ACK, reserved must be 1}
- if cfg.outmx > 0 then set_bit(mc4data,4,true); {outmx, pnp on 82c924}
+ if cfg.outmx > 0 then set_bit(mc4data,4,true); 
  if cfg.fmclk = 2 then set_bit(mc4data,3,true);
  if cfg.silence = 1 then set_bit(mc4data,2,true);   {silence}
 
@@ -1446,6 +1450,8 @@ end;
 
 
 Procedure SetInitValues;
+{Sets the default values from the data sheet.}
+ 
 var mc1data,
     mc2data,
     mc3data,
@@ -1454,12 +1460,11 @@ var mc1data,
     mc6data  : byte;
 
 begin
- {Setzt die im Datenblatt als Standard angegebenen Werte}
  mc1data := 0;
  mc2data := 3;
  mc3data := 2;
  mc4data := $A2;
- mc5data := $25; { $2F bei Crystal Codec}
+ mc5data := $25; { $2F for Crystal Codec}
  mc6data := $83;
 
  write929(MC1_PORT,mc1data);
@@ -1472,36 +1477,23 @@ end;
 
 
 Procedure Codec_Access(value : boolean);
+{Enable/Disbale access to the codec when in Sound Blaster mode}
 var dummy : byte;
 begin
-     if SBMode then
-     begin
-       dummy := 0;
-
-      if value = false then
-      begin
-        dummy := read929(MC5_PORT);
-        set_bit(dummy,4,false); {disable access to codec in SB Mode}
-        write929(MC5_PORT,dummy);
-        SetSBMode(opticfg);
-      end
-      else
-      begin
-        Getcfg(opticfg); {Save state}
-        dummy := read929(MC5_PORT);
-        set_bit(dummy,4,value); {enable/disable access to codec in SB Mode}
-        write929(MC5_PORT,dummy);
-       end;
-
-     end;
-
+   if SBMode then  {Only do this when in SB mode!}
+   begin
+     dummy := 0;
+     dummy := read929(MC5_PORT);
+     set_bit(dummy,4,value); {enable/disable access to codec in SB Mode}
+     write929(MC5_PORT,dummy);
+   end;
 end;
 
 
 Procedure Protect_Shadowregs(value : boolean);
+{The registers of the codec are shadowed by the controller. This shadow registers can be writeprotected}
 var dummy : byte;
 begin
-  set_bit(dummy,5,false); {unprotect shadow registers}
   dummy := 0;
   dummy := read929(MC5_PORT);
   set_bit(dummy,5,value); {Protect/unprotect shadow registers}
@@ -1520,26 +1512,19 @@ end;
 
 
 Procedure ChipTest929(on : boolean);
+{Experimental! Enables Chip-Test-Mode}
 var dummy : byte;
 begin
  dummy := 0;
  dummy := read929(MC2_PORT);
- if on then
- begin
-    set_bit(dummy,4,true);
-    set_bit(dummy,3,true);
-    set_bit(dummy,2,true);
- end
- else
- begin
-    set_bit(dummy,4,false);
-    set_bit(dummy,3,false);
-    set_bit(dummy,2,false);
- end;
+ set_bit(dummy,4,on);
+ set_bit(dummy,3,on);
+ set_bit(dummy,2,on);
  write929(MC2_PORT,dummy);
 end;
 
 Procedure Powerdown929(on : boolean);
+{Enable/Disable powerdown mode }
 var dummy : byte;
 begin
  dummy := 0;
@@ -1549,16 +1534,18 @@ begin
 end;
 
 Procedure SBMixer(on : boolean);
+{Enable/Disbale the simulation of the Sound Blaster Pro Mixer chip}
 var dummy : byte;
 begin
  dummy := 0;
  dummy := read929(MC5_PORT);
- set_bit(dummy,2,on);  {epen}
- set_bit(dummy,7,on);  {automatic volume control}
+ set_bit(dummy,2,on);  {Enable/Disable mixer emulation}
+ set_bit(dummy,7,on);  {Enable/Disable automatic volume control}
  write929(MC5_PORT,dummy);
 end;
 
 Procedure SBADPCM(on : boolean);
+{Enables / Disables Sound Blaster ADPCM support}
 var dummy : byte;
 begin
  dummy := 0;
@@ -1568,6 +1555,7 @@ begin
 end;
 
 Function ChipRevision_929 : byte;
+{Returns the Revision ID of the 82C929}
 var d,d1 : byte;
 begin
  d := read929(MC3_PORT);
