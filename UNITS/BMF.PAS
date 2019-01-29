@@ -1,5 +1,5 @@
 {
- Program: Unit for replay of "Easy Adlib" OPL-2 Sound modules
+ Unit to replay OPL-2 Sound modules created with "Easy Adlib" by Brain/RZR
  Author : Jan Knipperts 
  Ver.   : 1.0
  Date   : 26.02.2000}
@@ -11,7 +11,6 @@
 
  type
 
-
    ChannelInfo = record
              Note   : byte;
              Octave : byte;
@@ -21,10 +20,11 @@
    end;
 
  const
-{Timer:}
+
+{Values for Timing}
      irq_freq   : real = 50;
      timer_freq : real = 50;
-     BMFtimer   = 70; {Bei manchen Liedern scheinen 55, bei anderen 68,5 Hz oder 70 Hz zu passen...}
+     BMFtimer   = 70;         {For v1.1, older modules will need 55, or 68,5 Hz}
 
 var
         title       : array[1..40] of char;
@@ -33,7 +33,7 @@ var
         numinst     : byte;
         music       : pointer;
         datasize    : word;
-        Chan        : array[0..8] of ChannelInfo;
+        Chan        : array[0..8] of ChannelInfo; {Just for information. All necessary information about whats going on will be stored here}
 
 
         Function  PlayBMFfile(filename : string) : byte;
@@ -53,7 +53,7 @@ implementation
 
         const
 
-     {Das Standart-Instrument "Silence"}
+     {The default instrument "Silence"}
      Silencename : array[1..11] of char = (
      'S','i','l','e','n','c','e',' ',' ',' ',#0);
      Silence     : array[0..12] of byte = (
@@ -90,8 +90,8 @@ implementation
        ID           : array[1..3] of char; {BMF}
        Filever      : array[1..3] of char; {1.1}
        ok           : integer;
-       iflag        : array[1..4] of byte;  {flag 32-Bit fr instrumente}
-       tflag        : array[1..4] of byte;  {flag fr Tracks}
+       iflag        : array[1..4] of byte;  {32 bit flag for instruments}
+       tflag        : array[1..4] of byte;  {32 bit flag for tracks}
        bc           : word;
        inst         : array[1..32] of bmfinst;
        defaultvoice : bmfinst;
@@ -111,8 +111,8 @@ implementation
 
 
         Function GetDataByte(pos : word) : byte;
+        {Gets one byte from our buffer in memory}
         begin
-         {Gets one byte from buffer}
           if (ofs(music^)+pos <= 65535) and (pos < datasize) then
           begin
             GetDataByte := mem[seg(music^):ofs(music^)+pos];
@@ -122,7 +122,7 @@ implementation
 
 
         Procedure SetVoice(channr : byte;var instr : BMFInst);
-        {Loads the instrument (instr) to the given channel (chnnr)}
+        {Loads the instrument (instr) into the given channel (chnnr)}
         var ic : byte;
         begin
           setreg(offsets[0,channr]+$20, instr.data[0]);
@@ -143,6 +143,7 @@ implementation
 
 
         Procedure ConvertStream(chan : byte);
+        {Converts the stream data into something we can use for replay}
         var
           command            : byte;
           cpos               : word;
@@ -269,6 +270,7 @@ implementation
           {=========================== FX ======================}
 
           Procedure Portamento_up(chan,speed : byte);
+          {Slides frequency of the given channel down by the given speed}
           var  freqdum : word;
                b1      : byte;
 
@@ -292,6 +294,7 @@ implementation
 
 
          Procedure Portamento_down(chan,speed : byte);
+         {Slides frequency of the given channel down by the given speed}
          var
          freqdum : integer;
             b1   : byte;
@@ -315,7 +318,7 @@ implementation
 {================================== Main Player}
 
   Procedure UpdatePlayer;
-  {The Main update function for the player to be called by the interrupt}
+  {The Main update function for the player that has to be called by the interrupt}
   var cc,ic    : byte;
       event    : BMFEvent;
   begin
@@ -338,17 +341,17 @@ implementation
              {First proceed the special events
               (end of stream and loop of events)}
 
-             event := stream[cc][streaminfo[cc].pos]; {just for our comfort}
+             event := stream[cc][streaminfo[cc].pos]; {save the acutal event for our information}
 
-             while event.cmd in [$FD..$FF] do     {while there comes a special event}
+             while event.cmd in [$FD..$FF] do     {Handle special events}
              begin
 
-                  if event.cmd = $FF then          {End of stream}
+                  if event.cmd = $FF then          {End of stream occured}
                   begin
                    streaminfo[cc].pos  := $FFFF;
                    dec(tracknum);                 {dec number of active tracks}
                    chan[cc].active := false;
-                   Chan[cc].note   := 0;  {update variables}
+                   Chan[cc].note   := 0;          {update the information}
                    Chan[cc].octave := 0;
                    break;
                   end;
@@ -376,13 +379,13 @@ implementation
 
 
 
-             {Now the normal events}
+             {Now proceed the normal events}
 
              if streaminfo[cc].pos <> $FFFF then    {Check again}
              begin
                   streaminfo[cc].delay := event.delay;  {Get next delay}
 
-                  if event.cmd > 0 then   {There is a command / fx}
+                  if event.cmd > 0 then   {There is a command / special effect}
                   begin
 
                        if event.cmd in [0..$F] then {Porta up}
@@ -466,14 +469,14 @@ begin
 end;
 
 
-procedure SetClockRate(ticks: longint); {set a new clockrate}
+procedure SetClockRate(ticks: longint); {sets a new clockrate in ticks}
 begin
   port[$43] := $36;
   port[$40] := lo(ticks);
   port[$40] := hi(ticks);
 end;
 
-procedure UpdateTimer(refresh: real);   {Update Timer to a specified frequency}
+procedure UpdateTimer(refresh: real);   {Update Timer to a specified frequency (in Hz)}
 begin
   timer_freq := refresh;
 
@@ -587,6 +590,7 @@ end;
 
 
 Function PlayBMFdata(p : pointer; songsize : word) : byte;
+{Plays a bmf module that is stored in memory}
 var bytec,cnt,c : byte;
     o     : word;
 {
@@ -691,6 +695,7 @@ end;
 
 
 Function PlayBMFfile(filename : string) : byte;
+{Plays a BMF file from disk}
 var bytec,cnt,c : byte;
 {
  Errorcodes returned :
