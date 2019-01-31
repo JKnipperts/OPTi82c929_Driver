@@ -44,7 +44,7 @@ type
 
 
 {$L SONG.OBJ}
-Procedure INTRO8; external;   {includes the FM song}
+Procedure INTRO8; external;   {includes the FM song (INTRO8.BMF by "The Brain /Razor1911")}
 {$L TEST8.OBJ}
 Procedure SOUND8BIT; external;   {includes the sample}
 
