@@ -1,5 +1,5 @@
-{Yamaha OPL-2/3 FM-Chip Low Level Sounddriver}
-{Version 1.5a vom 05.06.2002
+{Low level stuff to control the Yamaha OPL-2/3 FM-Chip}
+{Version 1.5a - 05/06/2002
 Copyright (c) 2001/2002 by Jan Knipperts}
 
 
@@ -22,11 +22,15 @@ const
   ($34,$31,$54,$51,$74,$71,$94,$91,$C7,$F4,$F1),     {Channel 7}
   ($35,$32,$55,$52,$75,$72,$95,$92,$C8,$F5,$F2));    {Channel 8}
 
-   {  Offsets[operator, channel] gibt Offset  fÅr die richtigen Chip-Register
-      in den untenstehenden Proceduren}
+{  Offsets[operator, channel] returns the offset of the correct Chip-Register}
+        
    Offsets : array[0..1, 0..8] of word =
       (($00, $01, $02, $08, $09, $0A, $10, $11, $12),
        ($03, $04, $05, $0B, $0C, $0D, $13, $14, $15));
+
+
+{Yamaha "Fnums" for supported notes. Using this array of fixed constants is faster than calculate 
+them during runtime.}
 
  FnumNotes : array[1..25] of array[1..12] of word = (
     (343, 364, 385, 408, 433, 459, 486, 515, 546, 579, 614, 650),
@@ -57,10 +61,10 @@ const
     (362, 384, 407, 431, 457, 484, 513, 544, 577, 611, 648, 687),
     (363, 385, 408, 432, 458, 485, 514, 545, 578, 612, 649, 688));
 
- StandartFnum : array[0..11] of word = ($16b,$181,$198,$1b0,$1ca,$1e5,
+ DefaultFnum : array[0..11] of word = ($16b,$181,$198,$1b0,$1ca,$1e5,
                                         $202,$220,$241,$263,$287,$2ae);
 
-   adlibport = $388; {standard I/O Port fÅr FM-Chip}
+   adlibport = $388; {default I/O Port for FM-Chip (Adlib)}
    freqend = $2AE;
  freqstart = $156;
  freqrange = freqend-freqstart;
@@ -84,60 +88,65 @@ procedure set_bit(var b:byte; bit:integer; value:boolean);
 
 
 Function DetectOPL2 : boolean;
-{Ist ein OPL-2 Chip vorhanden?}
+{Detects Yamaha YM3812 compatible chip}
 Function DetectOPL3 : boolean;
-{Ist ein OPL-3 Chip vorhanden ?}
+{Detects Yamaha YMF262 compatible chip}
 
 
 Procedure InitOPL;
-{Initalisiert den Soundchip und setzt alle Register auf 0}
+{Initalizes the  FM chip and sets all registers to 0}
 Procedure ClearOPL;
-{Setzt alle Channel auf Mute und die Chip-Register auf 0}
+{mutes all channles and clears all registers}
 
 Procedure SetFnumTable(fn : array of word);
-{Setzt andere Fnummern fÅr Noten}
+{Sets another table with Fnums for alterantive note frequencies}
 
 
 Procedure Setreg(address,data : word);
-{Setzt ein bestimmtes Register des OPL-Chips}
+{Writes a databyte to an OPL-Register}
+
 Procedure KeyOff(chan : byte);
-{Per Keyoff-Bit aktuellen Ton im Channel ausschalten}
+{Sets the Keyoff-Bit for the given channel}
 Procedure SetkeyState(chan : byte; onoff : boolean);
-{Setzt oder lîscht das Keyon-Bit im angegebenen Channel}
+{Sets or clears the Keyon-Bit for the given channell}
 Procedure switchOFF(ch : byte);
 {Note 0 + Keyoff}
 
 
 Function nFreq(note : Byte) : Word;
-{Gibt die Frequenz in Hz fÅr eine Note zurÅck}
+{Returns the frequency in Hz for the provided note}
+
 Function toHz(note,octave : byte) : word;
-{Wandelt Note+Oktave in Hz-Frequenz um}
+{Converts note+octave to an absolute frequency in Hz}
 
 
 Procedure SetMvolume(chan,value : byte);
-{Setzt LautstÑrke des Modulators
-(0 = Laut, 63 = Leise. )}
+{Sets the volume of the modulator. (Note: 0 means max volume, 63 silent}
 Procedure SetCVolume(chan,value : byte);
-{Setzt LautstÑrke des Carrier
-(0 = Laut, 63 = Leise. )}
+{Sets the volume of the carrier. (Note: 0 means max volume, 63 silent}
+
 Function GetMvolume(chan : byte) : byte;
+{Returns actual volume of the modulator}
+
 Function GetCvolume(chan : byte) : byte;
+{Returns actial volume of the carrier}
 
 Procedure Waveselect(on : boolean);
+{Waveform selection on/off}
 
 Procedure KeyOn(chan,octave : byte;pitch : word);
-{Spielt eine Note im angegebenen Channel}
+{Plays note/octave in the provided channel. An additional frequency pitch can be provided for effects}
 
 Procedure Setkey(chan,octave : byte;pitch : word);
-{Setzt eine Note im angegebenen Channel,ohne sie zu spielen}
-
+{Jut sets the provided note,octave,pitch for the given channel without playing it}
 
 Procedure Setfreq(chan : byte; freq : integer);
-{Spielt eine bestimmte Frequenz im angegebenen Channel}
-Function GetFreq(chan : byte) : word;
-{Liefert die aktuelle Frequenz im angegebenen Channel in Hz}
+{Plays the provded frequency in the specified channel}
 
-{FÅr Schlagzeug-Modus (Percussionmode)}
+Function GetFreq(chan : byte) : word;
+{Returns the actual frequency for that channel}
+
+{Percussionmode}
 Procedure rhythm(value:boolean);
 Procedure bass_drum(value:boolean);
 Procedure snare_drum(value:boolean);
@@ -145,7 +154,7 @@ Procedure Tom_tom(value:boolean);
 Procedure cymbal(value:boolean);
 Procedure Hi_hat(value:boolean);
 
-{Setzt die Parameter eines Operators}
+{Sets the parameters for an operator (programming an Instrument)}
 procedure SetAM(chan, op : byte; bit, amd:boolean);
 procedure SetVib(chan, op : byte; bit, amd:boolean);
 procedure SetEG(chan, op : byte; bit:boolean);
@@ -170,7 +179,7 @@ procedure SetFM(channel:word; value:boolean);
 implementation
 
 
-{============ Interne Hilfsfunktionen =================}
+{============ Some internal functions =================}
 
 procedure set_bit(var b:byte; bit:integer; value:boolean);
 {Schnelle Funktion zum setzen eines einzelnen Bit}
@@ -198,7 +207,7 @@ begin
 end;
 
 Function clrBit(b : Byte; n : bitNum) : Byte;
-{lîscht ein Bit}
+{l‚Äùscht ein Bit}
 begin
   clrBit := b and hi($FEFF shl n);
 end;
@@ -207,8 +216,8 @@ end;
 Procedure Addrdelay;
 assembler;
 asm
-   mov     cx, 6           {6 Wiederhohlungen = 3.3 microsekunden}
-   mov     dx, oplport        {Adlib Port (388h)}
+   mov     cx, 6           {6 cycles = 3.3 microseconds}
+   mov     dx, oplport        
 
 @delayloop1:
    in      al, dx
@@ -220,7 +229,7 @@ end;
 Procedure Datadelay;
 assembler;
 asm
-   mov     cx, 35          {35 Wiederhohlungen = 23 microsekunden}
+   mov     cx, 35          {35 cycles = 23 microseconds}
    mov     dx, oplport     {Adlib Port (388h)}
 
 @delayloop2:
@@ -252,15 +261,13 @@ end;
 
 
 function _word(Lo,Hi: Byte): Word;
-{Konvertiert zwei Byte (jeweils 8-Bit) in ein Word (16-Bit)}
+{converts two bytes (8 bit) to one word (16 bit}
 assembler;
 asm
         mov     al,Lo
         mov     ah,Hi
 end;
 
-
-{======================= OPL- Funktionen ===============}
 
 
 Procedure Setreg(address,data : word);
@@ -315,11 +322,11 @@ begin
 
  if on then
  begin
-  setreg($01,$20);          {Waveforms an}
+  setreg($01,$20);          {Waveforms on}
  end
  else
  begin
-  setreg($01,00);          {Waveforms aus}
+  setreg($01,00);          {Waveforms off}
  end;
 end;
 
@@ -374,21 +381,19 @@ asm
 @zeroing_loop:
         push    ax
         mov     dx, oplport
-        out     dx, al          {schreibe in Adress-Port}
+        out     dx, al          {write to adress port}
         call addrdelay
-        mov     al, 0           {lîsche Daten-Register}
+        mov     al, 0           {clear register }
         mov     dx, dport
         out     dx, al
         call datadelay
         pop     ax
         inc     al
-                               {Lîsche alle 254-Register (01h-F5h)}
+                               {clear all 254 registers (01h-F5h)}
         cmp     al, 0F5h
-        jbe     @zeroing_loop      {01-F5h, wiederhohle  }
-end;
+        jbe     @zeroing_loop     
+       end;
 setreg($08,$00);          {FM-Musikmodus an}
-{Waveselect(true);}
-
 end;
 
 
@@ -400,7 +405,6 @@ end;
 
 
 function nFreq(note : Byte) : Word;
-  {Gibt richtige Frequenz fÅr Note}
 assembler;
 asm
         mov     al,note
@@ -440,7 +444,7 @@ begin
    asm
     mov cl,b2
     mov ch,b1
-    and ch,3                        { hîhere Frequenz bits }
+    and ch,3                        { h‚Äùhere Frequenz bits }
     sub cx,FreqStart
     mov al,b1
     shr al,2
@@ -461,7 +465,6 @@ end;
 
 
 Function toHz(note,octave : byte) : word;
-{Wandelt Note+Oktave in Hz-Frequenz um}
 var
    highpitch,
    lowpitch,boo,bot :byte;
@@ -480,11 +483,11 @@ begin
   asm
     mov cl,bot
     mov ch,boo
-    and ch,3                        { Frequenz }
+    and ch,3                        { Frequency }
     sub cx,FreqStart
     mov al,boo
     shr al,2
-    and ax,7                        { Oktave   }
+    and ax,7                        { Octave   }
     mov dx,FreqRange
     mul dx
     add ax,cx
@@ -505,7 +508,7 @@ end;
 Function DetectOPL2 : boolean;
 var test1,test2,cnt : byte;
 begin
- setreg(4,$60);       {Ist eine OPL-2 kompatible Soundkarte vorhanden ?}
+ setreg(4,$60);       
  setreg(4,$80);
  test1 := port[oplport];
  setreg(2,$FF);
@@ -520,7 +523,7 @@ begin
  test1 := test1 and $E0;
  test2 := test2 and $E0;
 
- if (test1 <> $00) or (test2 <> $0C0) then   {leider nicht...}
+ if (test1 <> $00) or (test2 <> $0C0) then   
  begin
   detectOPL2 := false;
  end
@@ -532,7 +535,6 @@ end;
 
 
 Function DetectOPL3 : boolean;
-{Ist ein OPL-3 Chipset vorhanden ?}
 var test : byte;
 begin
 
@@ -563,7 +565,7 @@ end;
 
 
 
-{Volume Funktionen : }
+{Volume }
 
 procedure SetOutput(chan, op : byte; value:byte);
 var d1 : byte;
@@ -575,13 +577,10 @@ begin
 end;
 
 Procedure SetMVolume(chan,value : byte);
-{Setzt LautstÑrke des Modulators
-Bedenke:
-0 = Laut, 63 = Leise. }
 begin
 
      if Value > 63 then Value := 63;
-     volumeM[chan] := value;       {LautstÑrke speichern}
+     volumeM[chan] := value;       
 
      SetOutput(chan,0,value);
 
@@ -589,12 +588,12 @@ end;
 
 
 Procedure SetCVolume(chan,value : byte);
-{Setzt LautstÑrke des Carrier
+{Setzt Lautst‚Äûrke des Carrier
 Bedenke:
 0 = Laut, 63 = Leise. }
 begin
    if Value > 63 then Value := 63;
-   volumeC[chan] := value;       {LautstÑrke des Channels speichern}
+   volumeC[chan] := value;       
    SetOutput(chan,1,value);
 end;
 
@@ -631,7 +630,7 @@ begin
     mov AX,Freq
     mov CX,FreqRange
     xor DX,DX
-    div CX                          {Oktave und richtige Frequenz errechnen}
+    div CX                          
     add DX,FreqStart
     mov octave,AX
     mov pitch,DX
@@ -679,8 +678,6 @@ end;
 
 
 Function GetCvolume(chan : byte) : byte;
-{Liefert die aktuelle LautstrÑrke des Channels
- (aus "Old43"}
  var data,bc : byte;
 begin
     {Carrier Amplitude holen}
@@ -690,7 +687,6 @@ begin
 end;
 
 Function GetMvolume(chan : byte) : byte;
-{Liefert die aktuelle LautstrÑrke des Channels}
  var data,bc : byte;
 begin
 
