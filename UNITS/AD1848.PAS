@@ -162,7 +162,7 @@ end;
 
 
 procedure XDelay(ms:word);
-{Replacement for Borlands Delay routine}
+{Replacement foÂr Borlands Delay routine}
 assembler;
 asm
   mov ax,1000
@@ -497,7 +497,7 @@ var d1,d2 : byte;
         asm
          sti
         end;
-
+        Init_AD1848 := true;
   end;
 
 
