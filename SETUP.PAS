@@ -8,7 +8,8 @@ Author :    Jan Knipperts   (Dragonsphere)
 changes
   v1.0 to 1.01: Keyboard control was added
   v1.01 to 1.1:
-   - Bug fix: Program tries no more to load config when standard cfg was set
+   - Bug fix: Program will no longer try to load the configuration file 
+     when default settings were set
    - Bug fix: MPU401 will no longer be tested when disabled
 *****************************************************************************}
 
@@ -328,8 +329,8 @@ end;
   c := 1;
   while (name[c] = ' ') and (c <= length(name)) do inc(c);
   putchar(x+(c-1),y,name[c],4,7);
-  for c := x+1 to x+length(name) do fastwrite(c,y+1,col,1, 'ﬂ');
-  fastwrite(x+length(name),y,col,1, '‹');
+  for c := x+1 to x+length(name) do fastwrite(c,y+1,col,1, '√ü');
+  fastwrite(x+length(name),y,col,1, '√ú');
  end;
 
  Procedure Wait_for_Mousebutton;
@@ -432,17 +433,17 @@ Procedure SetStandardcfg;
 begin
  with cfg do
  begin
-  initmode    := 0;   {Modus SB/WSS}
-  powerdwn    := 0;   {Stromsparmodus}
+  initmode    := 0;   {SB mode}
+  powerdwn    := 0;   {Power down mode off}
   silence     := 0;   {Mute off}
   shprotect   := 1;   {Shadow Register protection on}
   access      := 0;   {No access to codec in SB Mode}
   Cfix        := 0;   {We assume an Analog Devices codec}
 
   CDTYPE      := $FF; {CD-ROm off}
-  CDBASE      := $340; {Port fÅr CD-ROM}
-  CDIRQ       := $FF; {IRQ fÅr CD-ROM}
-  CDDMA       := 3;   {DMA fÅr CD-ROM}
+  CDBASE      := $340; {Port f¬År CD-ROM}
+  CDIRQ       := $FF; {IRQ f¬År CD-ROM}
+  CDDMA       := 3;   {DMA f¬År CD-ROM}
 
   SBBASE      := $220;   {SB Port}
   SBIRQ       := 5;   {SB IRQ}
@@ -454,12 +455,11 @@ begin
   ADPCM       := 1;   {Enable ADPCM}
 
   WSSBase     := $530; {WSS Port}
-  WSSDMA      := 1;    {WSS playback DMA 1}
- { WSSDMA2     := $FF;  {WSS capture DMA off}
-  WSSIRQ      := $FF;  {WSS Auto IRQ}
+  WSSDMA      := 1;    {WSS uses DMA 1}
+  WSSIRQ      := 7;    {use IRQ 7 for wss}
 
-  GPMODE      := 1;   {Game Port Timer.  0 fÅr Extern, 1 fÅr Intern}
-  OUTMX       := 1;   {Timing mode OPL3SCn}
+  GPMODE      := 1;   {Use internal Game Port Timer.}
+  OUTMX       := 1;   {Timing mode = OPL3SCn}
 
   GPEN        := 1;   {GamePort enabled}
   GPOUT       := 0;   {General purpose output disabled}
@@ -600,9 +600,9 @@ begin
 
  InitMenuScreen(title);
  Window(4,3,77,23,15,1,true);
- putchar(40,3,'—',15,1);
+ putchar(40,3,'√ë',15,1);
  for cnt := 4 to 19 do
- putchar(40,cnt,'≥',15,1);
+ putchar(40,cnt,'¬≥',15,1);
 
  fastwrite(9,4,14,1,'Sound Blaster configuration');
  fastwrite(9,6,15,1,'Address:');
@@ -629,7 +629,7 @@ begin
  Drawselector(58,8,WSS_DMA[wsstext.dma]);
 
  HLine(12);
- putchar(40,12,'≈',15,1);
+ putchar(40,12,'√Ö',15,1);
 
  fastwrite(9,13,14,1,'MPU401 configuration');
  fastwrite(9,15,15,1,'Enable MPU401 [ ]');
@@ -668,8 +668,8 @@ begin
 
 
  HLine(20);
- putchar(40,20,'≈',15,1);
- putchar(40,20,'¡',15,1);
+ putchar(40,20,'√Ö',15,1);
+ putchar(40,20,'√Å',15,1);
  Button(13,21,'Advanced Options',false);
  Button(34,21,'Test Settings',false);
  Button(52,21,'Save and quit',false);
@@ -751,7 +751,7 @@ end;
 
 
 Procedure Prepare_AD1848_for_SB;
-  {Configure the codec to a propper format and frequency for Sound Blaster compatibility}
+  {Configures the codec to a propper format and frequency for Sound Blaster compatibility}
   var dummy : byte;
   begin
 
@@ -775,9 +775,11 @@ Procedure Prepare_AD1848_for_SB;
       sti
      end;
    end;
+   
+
 
 Procedure Prepare_AD1848_for_WSS;
-  {Sets the codec to a propper format and frequency for WSS output and
+  {Configures the codec to a propper format and frequency for WSS output and
    performs a full autocalibration of the codec}
   var dummy : byte;
   begin
@@ -806,7 +808,7 @@ Procedure Prepare_AD1848_for_WSS;
 
 
 Function TestSBDMA : Boolean;
-{Lets the Sound Blaster DSP request a DMA transfer and checks if the right channel is requested}
+{Lets the Sound Blaster DSP request a DMA transfer and checks if the configured DMA-Channel is requested}
 var
   Before, After : Byte;
   Count : Word;
@@ -877,7 +879,7 @@ end;
 
 
 Function TestWSSDMA : Boolean;
-{Lets the codec request a DMA transfer and checks if the right channel is requested}
+{Lets the codec request a DMA transfer and checks if the configured channel is requested}
 var
   Before, After : Byte;
   Count : Word;
@@ -953,7 +955,7 @@ end;
 
 
 Function TestSBIRQ(irq : byte) : boolean;
-{Lets the SB DSP do a DMA transfer and checks if the right interrupt is called}
+{Lets the SB DSP do a DMA transfer and checks if the correct interrupt is called}
 var  count : word;
 begin
   DSP_reset(cfg.sbbase);
@@ -1266,7 +1268,7 @@ begin
   if filesize(f) > 65535 then
   begin
    writeln('');
-   writeln('ERROR: Autoexec.bat ist zu gro·!');
+   writeln('ERROR: Autoexec.bat ist zu gro√°!');
    writeln('');
    close(f);
    halt(1);
@@ -1353,11 +1355,11 @@ begin
 
    if length(s) >= length(newblaster) then
    begin
-    for dummy := 1 to length(s) do       {Alten Eintrag lîschen}
+    for dummy := 1 to length(s) do       {Alten Eintrag l¬îschen}
     begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := 0;
     end;
-    for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfÅgen}
+    for dummy := 1 to length(newblaster) do       {Neuen Eintrag einf¬Ågen}
     begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
     end;
@@ -1370,7 +1372,7 @@ begin
    else
    begin
      move(ptr(seg(p^),ofs(p^)+bpos+length(s))^,ptr(seg(p^),ofs(p^)+bpos+length(newblaster))^,size-(bpos+length(s)));
-     for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfÅgen}
+     for dummy := 1 to length(newblaster) do       {Neuen Eintrag einf¬Ågen}
      begin
       mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
      end;
@@ -1398,7 +1400,7 @@ begin
         ptr(seg(p^),ofs(p^)+(bpos+length(newblaster)))^,
         size-bpos);
 
-   for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfÅgen}
+   for dummy := 1 to length(newblaster) do       {Neuen Eintrag einf¬Ågen}
    begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
    end;
@@ -1429,7 +1431,7 @@ begin
         ptr(seg(p^),ofs(p^)+(cpos+length(initstr)))^,
         size-cpos);
 
-   for dummy := 1 to length(initstr) do       {Neuen Eintrag einfÅgen}
+   for dummy := 1 to length(initstr) do       {Neuen Eintrag einf¬Ågen}
    begin
      mem[seg(p^):ofs(p^)+cpos+(dummy-1)] := ord(initstr[dummy]);
    end;
@@ -1490,16 +1492,6 @@ begin
        selectitem(mselect);
       end;
     end;
-
-
-   {   if (key = 'D') then
-      begin
-        assign(f,'MAIN.SCR');
-        rewrite(f,1);
-        blockwrite(f,ptr(segB800,0)^,4000);
-        close(f);
-      end;   }
-
 
 
       {Checkboxes}
@@ -2145,14 +2137,6 @@ begin
       end;
     end;
 
-{      if (key = 'D') then
-      begin
-        assign(f,'ADV.SCR');
-        rewrite(f,1);
-        blockwrite(f,ptr(segB800,0)^,4000);
-        close(f);
-      end;}
-
 
       {Handle Buttons:}
 
@@ -2650,7 +2634,7 @@ end;
   waitkey;
   setstandardcfg;
  end
- else
+ else  {Fixed this in v1.1}
  begin
   LoadCfg;
  end;
