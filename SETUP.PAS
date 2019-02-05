@@ -3,7 +3,7 @@
 *****************************************************************************
 Version:    1.1
 Date   :    01.02.2019
-Author :    Jan Knipperts   (Dragonsphere)
+Author :    Jan Knipperts  
 
 changes
   v1.0 to 1.01: Keyboard control was added
