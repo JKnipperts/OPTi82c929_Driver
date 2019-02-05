@@ -39,40 +39,40 @@ const
 
 type
 OPTI929config       = record
-  initmode    : byte;   {Modus SB/WSS}
-  powerdwn    : byte;   {Stromsparmodus}
-  fmclk       : byte;   {OPL 2 oder 3 Taktung}
-  silence     : byte;   {Soundausgabe an/aus}
-  Cfix        : byte;   {Delay fix fr Crystal Chips}
+  initmode    : byte;   {SB / WSS mode }
+  powerdwn    : byte;   {Power down mode }
+  fmclk       : byte;   {Use OPL2 or OPL3 clock for FM-Chip}
+  OPL         : byte;   {0 = Yamaha YMF262 (OPL3) FM Sound, 1 = Yamaha YMF278 (OPL4) Wavetable}
+  silence     : byte;   {Complete mute on/off}
+  Cfix        : byte;   {Enabale longer I/O waits for Crystal Codecs}
   shprotect   : byte;   {Shadow Register protection}
-  access      : byte;   {Zugriff auf Codec auch im SB Modus?}
+  access      : byte;   {Enable/Disable access to codec in SB mode}
 
   CDTYPE      : byte;
-  CDBASE      : word;   {Port fr CD-ROM}
-  OPL         : byte;   {OPL 3/4}
-  CDIRQ       : byte;   {IRQ fr CD-ROM}
-  CDDMA       : byte;   {DMA fr CD-ROM}
+  CDBASE      : word;   {Base I/O port for CD-ROM}
+  CDIRQ       : byte;   {IRQ to use for CD-ROM}
+  CDDMA       : byte;   {DMA channel for CD-ROM}
 
-  SBBase      : word;   {SB Port}
+  SBBase      : word;   {SB I/O Port}
   SBIRQ       : byte;   {SB IRQ}
   SBDMA       : byte;   {SB DMA}
-  FMAP        : byte;   {SB Frequencymapping with one/both xtals}
+  FMAP        : byte;   {SB Frequencymapping - use one or both xtals}
   SBVER       : byte;   {SB DSP Version}
   FIFO        : byte;   {SB command FIFO}
   ADPCM       : byte;   {SB ADPCM support}
-  SBMIX       : byte;   {SB Mixer emulation}
+  SBMIX       : byte;   {SB automatic volume control and mixer emualtaion}
 
-  WSSBase     : word;   {WSS Port}
-  WSSDMA      : byte;   {WSS playback DMA}
+  WSSBase     : word;   {WSS I/O Port}
+  WSSDMA      : byte;   {WSS DMA}
   WSSIRQ      : byte;   {WSS IRQ}
 
-  GPEN        : byte;   {GamePort an/aus}
-  GPMode      : byte;   {Game Port Timer.  0 fr Extern, 1 fr Intern}
-  GPOUT       : byte;   {General purpose output}
-  OUTMX       : byte;   {Mix Midi / gameport outputs}
+  GPEN        : byte;   {Enable / Disable GamePort}
+  GPMode      : byte;   {Game Port Timer.  0 = Externaö, 1 = Internal}
+  GPOUT       : byte;   {Enable / Disable General purpose output}
+  OUTMX       : byte;   {Mix outputs}
 
-  MPU401      : byte;  {MPU401 an/aus}
-  MPUBASE     : word;  {MPU401 Port}
+  MPU401      : byte;  {Enable / Disable MPU401 }
+  MPUBASE     : word;  {MPU401 I/OO Port}
   MPUIRQ      : byte;  {MPU401 IRQ}
  end;
 
