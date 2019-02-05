@@ -2,11 +2,44 @@
 ******************************************************************************
 Low Level Initialization for Sound Cards with OPTi 82C929 and AD1848K Chipsets
 ******************************************************************************
-Version:    1.0 
-Date   :    03.01.2019
+Version:    1.1 
+Date   :    01.02.2019
 Author :    Jan Knipperts
-******************************************************************************}
+******************************************************************************
 
+0.7 auf 0.8:
+- Quiet Mode
+- Initialisiert mehrfach (initvalue)
+- MPU 401 wird initialisiert
+- setzt auch den input
+- Bugfix bei SB Doppelinit
+
+0.8 auf 0.9:
+- Konfigurationsdatei wird jetzt auch bei Aufruf aus einem
+  anderen Verzeichnis gefunden.
+- Unit CRT nicht mehr benîtigt.
+- CD-ROM UnterstÅtzung
+- Bugfix im SB IRQ
+
+09a auf 09b
+- Nutzt jetzt SBPro Unit;
+- Verschiedene kleine Bugfixes
+- Optionen kînnen nun in beliebiger Reihenfolge Åbergeben werden
+- Initialisierungsroutine komplett Åberarbeitet
+
+09b auf 09c
+- SB Frequenz jetzt in der cofig-Datei
+- Bug bei MPU Initialisierung behoben
+
+1.0
+- An neues config-format angepasst
+- SetVolume Åberarbeitet,
+- INFO Åberarbeitet
+
+1.1 
+- Bugfix bei Sound Blaster initialisierung (Protect Shadowregs)
+- Bugfix beim Setzen von Stereo/Mono
+- Info Åberarbeitet, zeigt jetzt tatsÑchliche Frequenzen und Audioformate}
 
 Program OPTI929_AD1848_Driver;
 uses opti929,mpu,opl,sbpro,ad1848,
@@ -36,21 +69,21 @@ type
 
 const
 
- Title : string = 'Optimized MAD16 PRO soundcard initialisation Version 1.0';
- Copyright : string = ' (c) 2018 by Jan Knipperts';
+ Title : string = 'Optimized MAD16 PRO soundcard initialisation Version 1.1';
+ Copyright : string = ' (c) 2019 by Jan Knipperts';
 
  error : array[1..11] of string =
         ('ERROR: Timeout. Codec is not responding!',
          'ERROR: Configuration file not found! Please run Setup.',
-         'ERROR: An I/O error occured while reading the configuration file!.',
+         'ERROR: An I/O error occured while reading the configuration file!',
          'ERROR: Unsupported WSS I/O address. Please run Setup.',
          'ERROR: Invalid IRQ address! Please run Setup.',
          'ERROR: Failed to initialize the MPU-401 interface. Please run Setup.',
-         'ERROR: Faild to initialize the Sound Blaster DSP. Please run Setup',
+         'ERROR: Faild to initialize the Sound Blaster DSP. Please run Setup.',
          'ERROR: Invalid volumes in the configuration file. Please run the Mixer to correct them.',
          'ERROR: No compatible CODEC found on your soundcard!',
          'ERROR: No compatible Soundcontroller found! This program requires the OPTi 82c929 soundcontroller.',
-         'ERROR: Faild to initialize the Windows Sound System. Please run setup');
+         'ERROR: Faild to initialize the Windows Sound System. Please run setup.');
 
  DSPver  : array[1..4] of string = ('1.5','2.1','3.2','4.4');
 
@@ -80,30 +113,30 @@ begin
   textcolor(7);
   textbackground(0);
   writeln('');
-  write('√ö');
+  write('⁄');
   for xc := 2 to 79 do
   begin
     gotoxy(xc,gety);
-    write('√Ñ');
+    write('ƒ');
   end;
-  write('¬ø');
-  write('¬≥');
+  write('ø');
+  write('≥');
   gotoxy(40-(length(title) div 2),gety);
   write(title);
   gotoxy(80,gety);
-  write('¬≥');
-  write('¬≥');
+  write('≥');
+  write('≥');
   gotoxy(40-(length(copyright) div 2),gety);
   write(copyright);
   gotoxy(80,gety);
-  write('¬≥');
-  write('√Ä');
+  write('≥');
+  write('¿');
   for xc := 2 to 79 do
   begin
     gotoxy(xc,gety);
-    write('√Ñ');
+    write('ƒ');
   end;
-  write('√ô');
+  write('Ÿ');
 end;
 
 
@@ -187,10 +220,8 @@ end;
         1:  dummy := PCM_COMPL_16BIT;
         end;
 
-        case sbfreq.chan of
-         0: AD1848_SetOutputFormat(codec_rates[SBFreq.freq+1].freq,dummy,MONO);  {Set Mono Frequency}
-         1: AD1848_SetOutputFormat(codec_rates[SBFreq.freq+1].freq,dummy,STEREO); {Set Stereo Frequency}
-        end;
+        AD1848_SetOutputFormat(codec_rates[SBFreq.freq+1].freq,
+                               dummy,boolean(sbfreq.chan)); {Set format and frequency}
 
         Setvolumes;
         Calibrate_AD1848;  {Recalibrate codec o new samplerate}
@@ -211,18 +242,14 @@ end;
      end;
         WaitForCodec;  {Just to be sure the codec is ready}
 
- {       if cfg.wssdma2 <> $FF then SetDMAMode(false); {if a sencond DMA channel is configured, set dual DMA mode}
 
         case wssfreq.bits of  {8 or 16 bit sound?}
         0:  dummy := PCM_U_8BIT;
         1:  dummy := PCM_COMPL_16BIT;
         end;
 
-        {Stereo or Mono?}
-        case wssfreq.chan of
-         0: AD1848_SetOutputFormat(codec_rates[wssFreq.freq+1].freq,dummy,MONO);  {Set Mono Frequency}
-         1: AD1848_SetOutputFormat(codec_rates[wssfreq.freq+1].freq,dummy,STEREO); {Set Stereo Frequency}
-        end;
+        AD1848_SetOutputFormat(codec_rates[SBFreq.freq+1].freq,
+                               dummy,boolean(wssfreq.chan)); {Set format and frequency}
 
         Setvolumes;
         Calibrate_AD1848;  {Recalibrate codec o new samplerate}
@@ -493,7 +520,7 @@ begin
  if FindOption('/SB') then SB := true;
  if FindOption('/WSS')  then WSS := true;
  if FindOption('/INFO') then INFO := true;
- if FindOption('/Q') then quiet := true else quiet := false;
+ if FindOption('/Q') then quiet := true;
 
  num := numinits;
 
@@ -578,21 +605,23 @@ begin
         halt(1);
       end;
 
-       if cfg.mpu401 = 1 then
+     if cfg.mpu401 = 1 then         {Set up MPU401 when it's enabled}
+     begin
+       DATAPORT := cfg.mpubase;
+       COMDPORT := cfg.mpubase+1;
+       STATPORT := cfg.mpubase+1;
+
+       ResetMPU(0);    {First reset MPU to default mode }
+       xdelay(50);     {Wait a bit}
+       if not ResetMPU(1) then   {Try to reset MPU to UART}
        begin
-         COMDPORT := cfg.mpubase+1;
-         STATPORT := cfg.mpubase+1;
-         DATAPORT := cfg.mpubase;
-         ResetMPU(0);
-         if not ResetMPU(1) then
-         begin
-           writeln('');
-           writeln(error[6]);
-           writeln('');
-           halt(1);
-         end;
-         ResetMPU(0);
+         writeln('');
+         writeln(error[6]);
+         writeln('');
+         halt(1);
        end;
+
+     end;
 
       if quiet then writeln('Sound card successfully initialized (WSS mode).');
    end;
@@ -606,10 +635,11 @@ begin
      if not quiet then
        write('Configure controller for Sound Blaster mode - ');
      SetWSSMode(cfg);
-     Protect_Shadowregs(false);
+     SetupWSSPort(cfg);
      Prepare_AD1848_for_SB;
-     SetSBMode(cfg); {Set OPTi Controller to SB Mode}
      Protect_Shadowregs(true);
+     SetSBMode(cfg); {Set OPTi Controller to SB Mode}
+
 
          {check for success}
 
@@ -625,22 +655,6 @@ begin
       halt(1);
      end;
 
-
-     if cfg.mpu401 = 1 then         {Set up MPU401}
-     begin
-       COMDPORT := cfg.mpubase+1;
-       STATPORT := cfg.mpubase+1;
-       DATAPORT := cfg.mpubase;
-       ResetMPU(0);
-       if not ResetMPU(1) then
-       begin
-         writeln('');
-         writeln(error[6]);
-         writeln('');
-         halt(1);
-       end;
-       ResetMPU(0);
-     end;
 
      {Cleanup: Reset DSP and set output}
      DSP_Reset(cfg.SBBase);
@@ -660,30 +674,56 @@ begin
      end;
      If cfg.sbmix = 0 then SBMixer(false);
 
-     if quiet then writeln('Sound card successfully initialized (Sound Blaster mode).');
+     if cfg.mpu401 = 1 then         {Set up MPU401 when it's enabled}
+     begin
+       DATAPORT := cfg.mpubase;
+       COMDPORT := cfg.mpubase+1;
+       STATPORT := cfg.mpubase+1;
+
+       ResetMPU(0);    {First reset MPU to default mode }
+       xdelay(50);     {Wait a bit}
+
+       if not ResetMPU(1) then   {Try to reset MPU to UART}
+       begin
+         writeln('');
+         writeln(error[6]);
+         writeln('');
+         halt(1);
+       end;
+
+     end;
+
+
+     DSP_Reset(cfg.SBBase);
+     if quiet then
+     writeln('Sound card successfully initialized (Sound Blaster mode).');
+
 
    end;
 
 
    if info then
    begin
-    writeln('');
+
+    {Get Controller info}
     write('Controller: OPTi 82C929A Revision ');
     str(ChipRevision_929 div 10,s);
     write(s+'.');
     str(ChipRevision_929 mod 10,s);
     writeln(s);
-    write('Codec: ');
-    if newchip = true then
-     writeln('AD1845 or CS4231')
-    else
-     writeln('AD1848/1846 or CS4248');
 
-    writeln('Codec Revision ID: '+addzero(codecver));
-    writeln('');
 
-    if SBMode = false then
+    if SBMode = false then             {Are we in SB or WSS Mode?}
     begin
+      write('Codec: ');
+      if newchip = true then
+      write('AD1845 or CS4231')
+      else
+      write('AD1848/1846 or CS4248');
+      str(codecver div 10,s);
+      write(' Revision: '+s+'.');
+      str(codecver mod 10,s);
+      writeln(s);
       writeln('Controller is in WSS mode:');
       writeln('');
       writeln('Port   : '+hexw(cfg.WSSbase)+'h');
@@ -722,7 +762,16 @@ begin
     end
     else
     begin
-      writeln('');
+      SetWSSMode(cfg);        {Switch to WSS Mode for full access to the codec}
+      write('Codec: ');
+      if newchip = true then
+      write('AD1845 or CS4231')
+      else
+      write('AD1848/1846 or CS4248');
+      str(codecver div 10,s);
+      write(' Revision: '+s+'.');
+      str(codecver mod 10,s);
+      writeln(s);
       writeln('Controller is in Sound Blaster mode.');
       writeln('');
       writeln('Port   : '+hexw(cfg.SBbase)+'h ');
@@ -747,16 +796,20 @@ begin
       write('Gamport: ');
       if cfg.gpen = 1 then writeln('Enabled') else writeln('Disbaled');
       writeln('');
-      writeln('Actual audio output format for Sound Blaster: ');
-      str(codec_rates[sbfreq.freq+1].freq,s);
-      write(s+'Hz ');
-      str((sbfreq.bits+1)*8,s);
-      write(s+' Bit ');
-      DSP_Reset(cfg.SBBase);
-      SB_Getoutput(stereo,info);
-      if stereo = true then writeln('Stereo') else writeln('Mono');
-      writeln('');
-
+      AD1848_GetOutputFormat(freq,fmt,mode);
+      writeln('Actual audio output format: ');
+      str(freq,s);
+      write(s+' Hz,  ');
+      case fmt of
+       COMP_U_LAW: write('8 Bit U-law companded');
+       COMP_A_LAW: write('8 Bit A-law companded');
+       PCM_U_8BIT: write('8 Bit unsigned PCM');
+       PCM_COMPL_16BIT: write('16 Bit Twos-Complement PCM');
+      end;
+      if mode = true then writeln(', Stereo') else writeln(', Mono');
+      Protect_Shadowregs(true);
+      SetSBMode(cfg);  {Switch Back to SB}
+      DSP_Reset(cfg.SBBase); {Reset DSP to be ready}
     end;
   end;
 

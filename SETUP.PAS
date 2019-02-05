@@ -1,10 +1,15 @@
 {*****************************************************************************
    Setup for my OPTi 82C929 Soundcard low level driver
 *****************************************************************************
-Version:    1.01
-Date   :    24.01.2019
-Author :    Jan Knipperts   (Dragonsphere /DOSReloaded)
+Version:    1.1
+Date   :    01.02.2019
+Author :    Jan Knipperts   (Dragonsphere)
 
+changes
+  v1.0 to 1.01: Keyboard control was added
+  v1.01 to 1.1:
+   - Bug fix: Program tries no more to load config when standard cfg was set
+   - Bug fix: MPU401 will no longer be tested when disabled
 *****************************************************************************}
 
 
@@ -66,7 +71,7 @@ type
  end;
 
 const
- title          : string = 'OPTi929 Configuration v1.01 (c) 2019 by Jan Knipperts';
+ title          : string = 'OPTi929 Configuration v1.1 (c) 2019 by Jan Knipperts';
  cfgfile        : string = 'SOUND.CFG';
  autoexec       : string = 'AUTOEXEC.BAT';
 
@@ -323,8 +328,8 @@ end;
   c := 1;
   while (name[c] = ' ') and (c <= length(name)) do inc(c);
   putchar(x+(c-1),y,name[c],4,7);
-  for c := x+1 to x+length(name) do fastwrite(c,y+1,col,1, '√ü');
-  fastwrite(x+length(name),y,col,1, '√ú');
+  for c := x+1 to x+length(name) do fastwrite(c,y+1,col,1, 'ﬂ');
+  fastwrite(x+length(name),y,col,1, '‹');
  end;
 
  Procedure Wait_for_Mousebutton;
@@ -435,9 +440,9 @@ begin
   Cfix        := 0;   {We assume an Analog Devices codec}
 
   CDTYPE      := $FF; {CD-ROm off}
-  CDBASE      := $340; {Port f¬År CD-ROM}
-  CDIRQ       := $FF; {IRQ f¬År CD-ROM}
-  CDDMA       := 3;   {DMA f¬År CD-ROM}
+  CDBASE      := $340; {Port fÅr CD-ROM}
+  CDIRQ       := $FF; {IRQ fÅr CD-ROM}
+  CDDMA       := 3;   {DMA fÅr CD-ROM}
 
   SBBASE      := $220;   {SB Port}
   SBIRQ       := 5;   {SB IRQ}
@@ -453,7 +458,7 @@ begin
  { WSSDMA2     := $FF;  {WSS capture DMA off}
   WSSIRQ      := $FF;  {WSS Auto IRQ}
 
-  GPMODE      := 1;   {Game Port Timer.  0 f¬År Extern, 1 f¬År Intern}
+  GPMODE      := 1;   {Game Port Timer.  0 fÅr Extern, 1 fÅr Intern}
   OUTMX       := 1;   {Timing mode OPL3SCn}
 
   GPEN        := 1;   {GamePort enabled}
@@ -595,9 +600,9 @@ begin
 
  InitMenuScreen(title);
  Window(4,3,77,23,15,1,true);
- putchar(40,3,'√ë',15,1);
+ putchar(40,3,'—',15,1);
  for cnt := 4 to 19 do
- putchar(40,cnt,'¬≥',15,1);
+ putchar(40,cnt,'≥',15,1);
 
  fastwrite(9,4,14,1,'Sound Blaster configuration');
  fastwrite(9,6,15,1,'Address:');
@@ -624,7 +629,7 @@ begin
  Drawselector(58,8,WSS_DMA[wsstext.dma]);
 
  HLine(12);
- putchar(40,12,'√Ö',15,1);
+ putchar(40,12,'≈',15,1);
 
  fastwrite(9,13,14,1,'MPU401 configuration');
  fastwrite(9,15,15,1,'Enable MPU401 [ ]');
@@ -663,8 +668,8 @@ begin
 
 
  HLine(20);
- putchar(40,20,'√Ö',15,1);
- putchar(40,20,'√Å',15,1);
+ putchar(40,20,'≈',15,1);
+ putchar(40,20,'¡',15,1);
  Button(13,21,'Advanced Options',false);
  Button(34,21,'Test Settings',false);
  Button(52,21,'Save and quit',false);
@@ -744,7 +749,8 @@ begin
 end;
 
 
- Procedure Prepare_AD1848_for_SB;
+
+Procedure Prepare_AD1848_for_SB;
   {Configure the codec to a propper format and frequency for Sound Blaster compatibility}
   var dummy : byte;
   begin
@@ -760,10 +766,8 @@ end;
         1:  dummy := PCM_COMPL_16BIT;
         end;
 
-        case sbfreq.chan of
-         0: AD1848_SetOutputFormat(codec_rates[SBFreq.freq+1].freq,dummy,MONO);  {Set Mono Frequency}
-         1: AD1848_SetOutputFormat(codec_rates[SBFreq.freq+1].freq,dummy,STEREO); {Set Stereo Frequency}
-        end;
+        AD1848_SetOutputFormat(codec_rates[SBFreq.freq+1].freq,
+                               dummy,boolean(sbfreq.chan)); {Set format and frequency}
 
         Calibrate_AD1848;  {Recalibrate codec o new samplerate}
         WaitForCodec;  {Wait for the codec to be ready again}
@@ -772,7 +776,7 @@ end;
      end;
    end;
 
- Procedure Prepare_AD1848_for_WSS;
+Procedure Prepare_AD1848_for_WSS;
   {Sets the codec to a propper format and frequency for WSS output and
    performs a full autocalibration of the codec}
   var dummy : byte;
@@ -785,15 +789,12 @@ end;
 
 
         case wssfreq.bits of  {8 or 16 bit sound?}
-         0:  dummy := PCM_U_8BIT;
-         1:  dummy := PCM_COMPL_16BIT;
+        0:  dummy := PCM_U_8BIT;
+        1:  dummy := PCM_COMPL_16BIT;
         end;
 
-        {Stereo or Mono?}
-        case wssfreq.chan of
-         0: AD1848_SetOutputFormat(codec_rates[wssFreq.freq+1].freq,dummy,MONO);  {Set Mono Frequency}
-         1: AD1848_SetOutputFormat(codec_rates[wssfreq.freq+1].freq,dummy,STEREO); {Set Stereo Frequency}
-        end;
+        AD1848_SetOutputFormat(codec_rates[SBFreq.freq+1].freq,
+                               dummy,boolean(wssfreq.chan)); {Set format and frequency}
 
         Calibrate_AD1848;  {Recalibrate codec o new samplerate}
         WaitForCodec;  {Wait for the codec to be ready again}
@@ -1136,28 +1137,32 @@ end;
 Procedure TestMPU;
 {Tests if basic MPU-401 functionality is working with the acutal configuration}
 begin
+  DATAPORT := cfg.mpubase;
   COMDPORT := cfg.mpubase+1;
   STATPORT := cfg.mpubase+1;
-  DATAPORT := cfg.mpubase;
+
   mouse_hide;
-  if not ResetMPU(1) then
-  begin
-    centeredtext(16,12,' Reset MPU-401 in UART mode - FAILED!')
-   end
-  else
-   begin
-    centeredtext(16,15,' Reset MPU-401 in UART mode - OK');
-   end;
+
+  ResetMPU(0);
+  xdelay(50);
 
   if not ResetMPU(0) then
   begin
-    centeredtext(17,12,' Reset MPU-401 in default mode - FAILED!')
+    centeredtext(16,12,'MPU-401 default mode - FAILED!')
    end
   else
    begin
-    centeredtext(17,15,'Reset MPU-401 in default mode - OK');
+    centeredtext(16,15,'MPU-401 default mode - OK');
    end;
 
+  if not ResetMPU(1) then
+  begin
+    centeredtext(17,12,'MPU-401 UART mode - FAILED!')
+   end
+  else
+   begin
+    centeredtext(17,15,'MPU-401 UART mode - OK');
+   end;
     mouse_show;
   ResetMPU(0);
 end;
@@ -1200,7 +1205,12 @@ begin
 
   TestWSS;
   TestSB;
-  TestMPU;
+
+  if cfg.mpu401 = 1 then
+    TestMPU
+  else
+    centeredtext(16,7,'MIDI Processing Unit is disabled.');
+
   TestFM;
 
 
@@ -1256,7 +1266,7 @@ begin
   if filesize(f) > 65535 then
   begin
    writeln('');
-   writeln('ERROR: Autoexec.bat ist zu gro√°!');
+   writeln('ERROR: Autoexec.bat ist zu gro·!');
    writeln('');
    close(f);
    halt(1);
@@ -1343,11 +1353,11 @@ begin
 
    if length(s) >= length(newblaster) then
    begin
-    for dummy := 1 to length(s) do       {Alten Eintrag l¬îschen}
+    for dummy := 1 to length(s) do       {Alten Eintrag lîschen}
     begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := 0;
     end;
-    for dummy := 1 to length(newblaster) do       {Neuen Eintrag einf¬Ågen}
+    for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfÅgen}
     begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
     end;
@@ -1360,7 +1370,7 @@ begin
    else
    begin
      move(ptr(seg(p^),ofs(p^)+bpos+length(s))^,ptr(seg(p^),ofs(p^)+bpos+length(newblaster))^,size-(bpos+length(s)));
-     for dummy := 1 to length(newblaster) do       {Neuen Eintrag einf¬Ågen}
+     for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfÅgen}
      begin
       mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
      end;
@@ -1388,7 +1398,7 @@ begin
         ptr(seg(p^),ofs(p^)+(bpos+length(newblaster)))^,
         size-bpos);
 
-   for dummy := 1 to length(newblaster) do       {Neuen Eintrag einf¬Ågen}
+   for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfÅgen}
    begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
    end;
@@ -1419,7 +1429,7 @@ begin
         ptr(seg(p^),ofs(p^)+(cpos+length(initstr)))^,
         size-cpos);
 
-   for dummy := 1 to length(initstr) do       {Neuen Eintrag einf¬Ågen}
+   for dummy := 1 to length(initstr) do       {Neuen Eintrag einfÅgen}
    begin
      mem[seg(p^):ofs(p^)+cpos+(dummy-1)] := ord(initstr[dummy]);
    end;
@@ -1482,13 +1492,13 @@ begin
     end;
 
 
-      {if (key = 'D') then
+   {   if (key = 'D') then
       begin
-        assign(f,'MAINK.SCR');
+        assign(f,'MAIN.SCR');
         rewrite(f,1);
         blockwrite(f,ptr(segB800,0)^,4000);
         close(f);
-      end;}
+      end;   }
 
 
 
@@ -1688,9 +1698,9 @@ begin
         end;
          MapCFGtoText;
          mouse_hide;
-        Drawselector(21,8,SB_DMA[sbtext.dma]);
-          mouse_show;
-        Wait_for_Mousebutton;
+         Drawselector(21,8,SB_DMA[sbtext.dma]);
+         mouse_show;
+         Wait_for_Mousebutton;
       end;
 
       {WSS config}
@@ -1708,9 +1718,9 @@ begin
 
         end;
         MapCFGtoText;
-         mouse_hide;
+        mouse_hide;
         Drawselector(58,6,WSS_Port[wsstext.port]);
-          mouse_show;
+        mouse_show;
         Wait_for_Mousebutton;
       end;
 
@@ -1725,9 +1735,9 @@ begin
          $604: cfg.wssbase := $530;
         end;
         MapCFGtoText;
-         mouse_hide;
+        mouse_hide;
         Drawselector(58,6,WSS_Port[wsstext.port]);
-          mouse_show;
+        mouse_show;
         Wait_for_Mousebutton;
       end;
 
@@ -1745,9 +1755,9 @@ begin
         end;
 
         MapCFGtoText;
-         mouse_hide;
+        mouse_hide;
         Drawselector(58,7,WSS_IRQ[wsstext.irq]);
-          mouse_show;
+        mouse_show;
         Wait_for_Mousebutton;
       end;
 
@@ -1765,9 +1775,9 @@ begin
         end;
 
         MapCFGtoText;
-         mouse_hide;
+        mouse_hide;
         Drawselector(58,7,WSS_IRQ[wsstext.irq]);
-          mouse_show;
+        mouse_show;
         Wait_for_Mousebutton;
       end;
 
@@ -1784,9 +1794,9 @@ begin
         end;
 
         MapCFGtoText;
-         mouse_hide;
+        mouse_hide;
         Drawselector(58,8,WSS_DMA[wsstext.dma]);
-          mouse_show;
+        mouse_show;
         Wait_for_Mousebutton;
       end;
 
@@ -2134,6 +2144,15 @@ begin
        selectitem(aselect);
       end;
     end;
+
+{      if (key = 'D') then
+      begin
+        assign(f,'ADV.SCR');
+        rewrite(f,1);
+        blockwrite(f,ptr(segB800,0)^,4000);
+        close(f);
+      end;}
+
 
       {Handle Buttons:}
 
@@ -2630,10 +2649,12 @@ end;
   writeln('Press any key to continue....');
   waitkey;
   setstandardcfg;
+ end
+ else
+ begin
+  LoadCfg;
  end;
 
-
- LoadCfg;
  getmem(p,4000); {Alloc additional screen buffer}
 
  menu := 1;    {Main menu}
