@@ -3,43 +3,10 @@
 Low Level Initialization for Sound Cards with OPTi 82C929 and AD1848K Chipsets
 ******************************************************************************
 Version:    1.1 
-Date   :    01.02.2019
+Date   :    02/01/2019
 Author :    Jan Knipperts
 ******************************************************************************
 
-0.7 auf 0.8:
-- Quiet Mode
-- Initialisiert mehrfach (initvalue)
-- MPU 401 wird initialisiert
-- setzt auch den input
-- Bugfix bei SB Doppelinit
-
-0.8 auf 0.9:
-- Konfigurationsdatei wird jetzt auch bei Aufruf aus einem
-  anderen Verzeichnis gefunden.
-- Unit CRT nicht mehr benîtigt.
-- CD-ROM UnterstÅtzung
-- Bugfix im SB IRQ
-
-09a auf 09b
-- Nutzt jetzt SBPro Unit;
-- Verschiedene kleine Bugfixes
-- Optionen kînnen nun in beliebiger Reihenfolge Åbergeben werden
-- Initialisierungsroutine komplett Åberarbeitet
-
-09b auf 09c
-- SB Frequenz jetzt in der cofig-Datei
-- Bug bei MPU Initialisierung behoben
-
-1.0
-- An neues config-format angepasst
-- SetVolume Åberarbeitet,
-- INFO Åberarbeitet
-
-1.1 
-- Bugfix bei Sound Blaster initialisierung (Protect Shadowregs)
-- Bugfix beim Setzen von Stereo/Mono
-- Info Åberarbeitet, zeigt jetzt tatsÑchliche Frequenzen und Audioformate}
 
 Program OPTI929_AD1848_Driver;
 uses opti929,mpu,opl,sbpro,ad1848,
@@ -113,30 +80,30 @@ begin
   textcolor(7);
   textbackground(0);
   writeln('');
-  write('⁄');
+  write('√ö');
   for xc := 2 to 79 do
   begin
     gotoxy(xc,gety);
-    write('ƒ');
+    write('√Ñ');
   end;
-  write('ø');
-  write('≥');
+  write('¬ø');
+  write('¬≥');
   gotoxy(40-(length(title) div 2),gety);
   write(title);
   gotoxy(80,gety);
-  write('≥');
-  write('≥');
+  write('¬≥');
+  write('¬≥');
   gotoxy(40-(length(copyright) div 2),gety);
   write(copyright);
   gotoxy(80,gety);
-  write('≥');
-  write('¿');
+  write('¬≥');
+  write('√Ä');
   for xc := 2 to 79 do
   begin
     gotoxy(xc,gety);
-    write('ƒ');
+    write('√Ñ');
   end;
-  write('Ÿ');
+  write('√ô');
 end;
 
 
@@ -311,7 +278,7 @@ begin
   if (cfg.WSSBase <> $530) and
      (cfg.WSSBase <> $E80) and
      (cfg.WSSBase <> $F40) and
-     (cfg.WSSBase <> $604) then                {Wrong WS-Port in config file}
+     (cfg.WSSBase <> $604) then                {Invalid WS-Port in config file}
   begin
    writeln('');
    writeln(error[4]);
@@ -323,7 +290,7 @@ begin
      (cfg.WSSIRQ <> 9) and
      (cfg.WSSIRQ <> 10) and
      (cfg.WSSIRQ <> 11) and
-     (cfg.WSSIRQ <> $FF) then                  {Wrong WSS-IRQ in config file}
+     (cfg.WSSIRQ <> $FF) then                  {Invalid WSS-IRQ in config file}
   begin
    writeln('');
    writeln(error[5]);
@@ -430,7 +397,7 @@ if not quiet then write('Initialize the Codec - ');
 
 Waitforcodec;   {Wait for codec to be ready...}
 
-if not Init_AD1848 then   {Codec initialization failed!}
+if not Init_AD1848 then   {Codec initialisation failed!}
 begin
   writeln('');
   writeln(error[1]);
@@ -513,9 +480,10 @@ end;
 {============================= Main program ============================}
 
 begin
- GetPath;         {Get path to config file}
+ GetPath;         {Get the current directory to be able to find the configuration 
+ file even if the program was started from Autoexec.bat}
 
- {Handle commandline:}
+ {Handle the commandline options:}
  if FindOption('/INIT') then INIT := true;
  if FindOption('/SB') then SB := true;
  if FindOption('/WSS')  then WSS := true;
@@ -539,7 +507,7 @@ begin
  end;
 
 
-  if not quiet then
+if not quiet then {Clear the screen if the "quiet" option is not enabled}
   begin
     asm
      mov ax,03h                       {Set 80x25 Textmode}
@@ -547,7 +515,7 @@ begin
     end;
   end;
 
-  PrintTitle;
+PrintTitle;  {Writes the title and copyright to the screen}
 
   if (init = false) and (wss = false) and
      (sb = false) and (info = false) then
@@ -575,10 +543,10 @@ begin
 
   if not quiet then writeln('');
 
-  if init then
+if init then    {Do we have to initalize the soundcard?}
   begin
-   DetectController;
-   InitSoundcard;
+  DetectController;  {Checks for OPTi 82C929}
+  InitSoundcard; {Initialize codec and set config}
   end
   else
   begin
@@ -762,7 +730,7 @@ begin
     end
     else
     begin
-      SetWSSMode(cfg);        {Switch to WSS Mode for full access to the codec}
+      SetWSSMode(cfg);        {Switch to WSS Mode for easier access to the codec's internals}
       write('Codec: ');
       if newchip = true then
       write('AD1845 or CS4231')
