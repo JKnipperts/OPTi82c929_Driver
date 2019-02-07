@@ -13,7 +13,7 @@ I therefore decided to program my own DOS driver, which lets the user change all
 - The driver offers many options to solve the most common problems with these sound cards:
 
   - The user can configure ALL settings, including reserved bits, of the chip in a convenient setup program. 
-    What is a significantly  improved Sound Blaster Pro compatibility is possible in many games.
+    This makes a significantly improved Sound Blaster Pro compatibility possible.
   - Some codecs do not fully calibrate at first start, resulting in distorted sound output. 
     It is therefore often recommended to initialize the sound card twice. 
     I have implemented an option for this: With the parameter /N the number of desired initializations can be specified. 
