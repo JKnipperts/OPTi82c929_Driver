@@ -9,7 +9,9 @@ I therefore decided to program my own DOS driver, which lets the user change all
 
 ## Features:
 - You can switch between Windows Sound System and Sound Blaster mode directly from the command line (or from a batch file). 
+
 - The driver offers many options to solve the most common problems with these sound cards:
+
   - The user can configure ALL settings, including reserved bits, of the chip in a convenient setup program. 
     What is a significantly  improved Sound Blaster Pro compatibility is possible in many games.
   - Some codecs do not fully calibrate at first start, resulting in distorted sound output. 
