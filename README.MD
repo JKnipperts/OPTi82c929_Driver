@@ -29,21 +29,21 @@ I therefore decided to program my own DOS driver, which lets the user change all
 
 ## The driver consists of four main programs:
 
-### SETUP
+#### SETUP
 Allows the comfortable configuration of the sound card. 
 On the first screen you can set the default configuration for Sound Blaster, 
 WSS, the MPU401 midi interface and a CD-ROM drive connected to the card.
 To be able to change all internal settings makes it easy to take settings that stop the sound card from working properly!
 So be careful when changing the advanced settings!
 
-### 929INIT
+#### 929INIT
 This program initializes the sound card with the settings from the setup. 
 The mode of the sound card can also be easily changed from the command line. 
 
-### MIXER
+#### MIXER
 Allows you to adjust the volume, configure the sound card's inputs for recording, and perform a sound check.
 
-### SBFIX
+#### SBFIX
 A small, memory-resident program that forces the sound card to output in stereo in Sound Blaster mode. 
 Some games have problems with stereo output with OPTi929 soundcards, this small program can help to fix this issue.
 Just run it before starting the game. 
@@ -87,7 +87,7 @@ Player for FM tunes in the "Easy adlib" file format (*.bmf).
 #### TEXTMODE.PAS 
 Fast drawing routines for the 80x25 Textmode. Replacement of Borlands CRT unit.
 
-### MISC.PAS  
+#### MISC.PAS  
 Some routines for bit manipulation, timing, displaying hex numbers and more...
 
 #### SETUP.PAS, MIXER.PAS and 929INIT.PAS
