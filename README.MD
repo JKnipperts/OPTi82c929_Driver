@@ -7,8 +7,21 @@ Sound cards with a sound controller of type 82c929 (MAD16 PRO) were widely used 
 Back in the day many manufacturers began to focus on driver support for Windows, and DOS drivers are often poorly programmed and just made to maintain compatibility. Also further developed codecs were used for these sound card, which are not fully supported by the previous drivers. This makes it difficult for today's friends of old hardware to get these sound cards to work properly. 
 I therefore decided to program my own DOS driver, which lets the user change all possible settings and configure his sound card optimally.
 
+## Features:
+- You can switch between Windows Sound System and Sound Blaster mode directly from the command line (or from a batch file). 
+- The driver offers many options to solve the most common problems with these sound cards:
+  - The user can configure ALL settings, including reserved bits, of the chip in a convenient setup program. 
+    What is a significantly  improved Sound Blaster Pro compatibility is possible in many games.
+  - Some codecs do not fully calibrate at first start, resulting in distorted sound output. 
+    It is therefore often recommended to initialize the sound card twice. 
+    I have implemented an option for this: With the parameter /N the number of desired initializations can be specified. 
+  - While the OPTi 929 imitates the Sound Blaster Pro DSP very well, the imitation of the mixer chip is unfortunately faulty. 
+    This can be seen by problems with the volume settings and the playback of stereo sound in some programs written for the SB Pro. 
+    This driver offers a mixer that bypasses the Sound Blaster mixer in the OPTi 929 and changes the volume directly in the codec, 
+    as well as a small TSR program that acts as a watchdog for the stereo output.
 
-The driver consists of four main programs:
+
+## The driver consists of four main programs:
 
 ### SETUP
 Allows the comfortable configuration of the sound card. 
