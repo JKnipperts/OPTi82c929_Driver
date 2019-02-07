@@ -63,13 +63,13 @@ This file contains all functions to initialize and (re)configure the OPTi 82C929
 In this file you will find all code needed to interact with an Analog Devices AD1848 compatible codec.  
 Therefore this unit can also be used for playing audio via the Windows Sound System (see the use in MIXER.PAS for an example how to do this). 
 
-### OPL.PAS 
+#### OPL.PAS 
 Code to interact with  Yamaha YM3812/ YMF262 (OPL2/OPL3) FM sound chips.
 
-### MPU.PAS 
+#### MPU.PAS 
 Code to interact with MPU 401 Midi interface
 
-### SBPRO.PAS
+#### SBPRO.PAS
 All necessary code to interact with an Sound BLaster Pro compatible card and it's mixer.
 
 #### SBFIX.ASM
@@ -81,16 +81,16 @@ All the datasheets for the OPTi 82c929 and the codecs it supports can be found i
 
 ### Additional units and the main programs
 
-### BMF.PAS 
+#### BMF.PAS 
 Player for FM tunes in the "Easy adlib" file format (*.bmf).
 
-### TEXTMODE.PAS 
+#### TEXTMODE.PAS 
 Fast drawing routines for the 80x25 Textmode. Replacement of Borlands CRT unit.
 
 ### MISC.PAS  
 Some routines for bit manipulation, timing, displaying hex numbers and more...
 
-### SETUP.PAS, MIXER.PAS and 929INIT.PAS
+#### SETUP.PAS, MIXER.PAS and 929INIT.PAS
 The three main files of my driver/initialisation program.
 
 ## Some Screenshots
