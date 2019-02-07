@@ -17,9 +17,11 @@ I therefore decided to program my own DOS driver, which lets the user change all
   - Some codecs do not fully calibrate at first start, resulting in distorted sound output. 
     It is therefore often recommended to initialize the sound card twice. 
     I have implemented an option for this: With the parameter /N the number of desired initializations can be specified. 
-  - While the OPTi 929 imitates the Sound Blaster Pro DSP very well, the imitation of the mixer chip is unfortunately faulty. 
-    This can be seen by problems with the volume settings and the playback of stereo sound in some programs written for the SB Pro. 
-    This driver offers a mixer that bypasses the Sound Blaster mixer in the OPTi 929 and changes the volume directly in the codec, 
+  - While the OPTi 929 imitates the Sound Blaster Pro DSP very well, the imitation of the mixer chip was unfortunately 
+    not implemented as accurately. In some programs written for the SB Pro, the volume cannot be changed or there are problems 
+    with the output of audio in stereo.
+    Often these problems can already be solved with the advanced settings of this driver, and my driver also offers a mixer program 
+    that bypasses the Sound Blaster mixer in the OPTi 929 and changes the volume directly in the codec, 
     as well as a small TSR program that acts as a watchdog for the stereo output.
 
 
