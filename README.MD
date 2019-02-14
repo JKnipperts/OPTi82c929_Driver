@@ -63,8 +63,11 @@ This file contains all functions to initialize and (re)configure the OPTi 82C929
 In this file you will find all code needed to interact with an Analog Devices AD1848 compatible codec.  
 Therefore this unit can also be used for playing audio via the Windows Sound System (see the use in MIXER.PAS for an example how to do this). 
 
-#### OPL.PAS 
-Code to interact with  Yamaha YM3812/ YMF262 (OPL2/OPL3) FM sound chips.
+#### OPLFM.PAS 
+Code to interact with  Yamaha YM3812/ YMF262 (OPL2/OPL3) FM synthesis chips.
+
+#### OPL4.PAS 
+Code to interact with Yamaha YMF278 OPL4 FM and Wavetable chip.
 
 #### MPU.PAS 
 Code to interact with MPU 401 Midi interface
