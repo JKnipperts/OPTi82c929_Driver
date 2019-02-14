@@ -1,6 +1,4 @@
 Unit Textmode;
-{Diese Unit enth„lt ntzliche Proceduren zum Zeichnen von Mens im Textmodus}
-{Version 1.61 - 24.01.19 }
 
 interface
 uses dos;
@@ -152,20 +150,20 @@ begin
 
   for xc := xp to xp1 do
   begin
-    putchar(xc,yp,'Ä',foreground,background);
-    putchar(xc,yp1,'Ä',foreground,background);
+    putchar(xc,yp,'Ã„',foreground,background);
+    putchar(xc,yp1,'Ã„',foreground,background);
   end;
 
   for yc := yp to yp1 do
   begin
-   putchar(xp,yc,'³',foreground,background);
-   putchar(xp1,yc,'³',foreground,background);
+   putchar(xp,yc,'Â³',foreground,background);
+   putchar(xp1,yc,'Â³',foreground,background);
   end;
 
-  putchar(xp,yp,'Ú',foreground,background);
-  putchar(xp1,yp,'¿',foreground,background);
-  putchar(xp,yp1,'À',foreground,background);
-  putchar(xp1,yp1,'Ù',foreground,background);
+  putchar(xp,yp,'Ãš',foreground,background);
+  putchar(xp1,yp,'Â¿',foreground,background);
+  putchar(xp,yp1,'Ã€',foreground,background);
+  putchar(xp1,yp1,'Ã™',foreground,background);
 
  end
  else
@@ -173,20 +171,20 @@ begin
 
   for xc := xp to xp1 do
   begin
-    putchar(xc,yp,'Í',foreground,background);
-    putchar(xc,yp1,'Í',foreground,background);
+    putchar(xc,yp,'Ã',foreground,background);
+    putchar(xc,yp1,'Ã',foreground,background);
   end;
 
   for yc := yp to yp1 do
   begin
-   putchar(xp,yc,'º',foreground,background);
-   putchar(xp1,yc,'º',foreground,background);
+   putchar(xp,yc,'Âº',foreground,background);
+   putchar(xp1,yc,'Âº',foreground,background);
   end;
 
-  putchar(xp,yp,'É',foreground,background);
-  putchar(xp1,yp,'»',foreground,background);
-  putchar(xp,yp1,'È',foreground,background);
-  putchar(xp1,yp1,'¼',foreground,background);
+  putchar(xp,yp,'Ã‰',foreground,background);
+  putchar(xp1,yp,'Â»',foreground,background);
+  putchar(xp,yp1,'Ãˆ',foreground,background);
+  putchar(xp1,yp1,'Â¼',foreground,background);
  end;
 end;
 
@@ -201,21 +199,21 @@ begin
    putchar(xc,yc,' ',c,b);
    if (yc = yp) or (yc = yp1) then
    begin
-    putchar(xc,yc,'Í',c,b);
+    putchar(xc,yc,'Ã',c,b);
    end;
   end;
 
  if yc >= yp+1 then
  begin
-  putchar(xp,yc,'º',c,b);
-  putchar(xp1,yc,'º',c,b);
+  putchar(xp,yc,'Âº',c,b);
+  putchar(xp1,yc,'Âº',c,b);
  end;
 
  end;
-  putchar(xp,yp,'É',c,b);
-  putchar(xp1,yp,'»',c,b);
-  putchar(xp,yp1,'È',c,b);
-  putchar(xp1,yp1,'¼',c,b);
+  putchar(xp,yp,'Ã‰',c,b);
+  putchar(xp1,yp,'Â»',c,b);
+  putchar(xp,yp1,'Ãˆ',c,b);
+  putchar(xp1,yp1,'Â¼',c,b);
 
 if shadow then
 begin
@@ -288,7 +286,7 @@ Procedure InitMenuScreen(title : string);
 var x,y,z : byte;
 begin
   z := 0 or 7 and not (1 shl 7);   {Textfarbe 7, Hintergrund 0, blinken aus}
-  Fill('±',z);
+  Fill('Â±',z);
   Centeredline(1,14,1,title);
 end;
 
