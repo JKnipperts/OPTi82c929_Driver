@@ -77,7 +77,7 @@ type
  end;
 
 const
- title          : string = 'OPTi929 Configuration v1.11 (c) 2019 by Jan Knipperts';
+ title          : string = 'OPTi 82C929 Configuration v1.2 (c) 2019 by Jan Knipperts';
  cfgfile        : string = 'SOUND.CFG';
  autoexec       : string = 'AUTOEXEC.BAT';
 
@@ -132,34 +132,40 @@ var
  yp,
  menu,
  mselect,
- aselect        : byte;
+ aselect             : byte;
  quit,
  mpuoff,
  cdoff,
- irqcalled      : boolean;
- p              : pointer;
- key            : char;
+ irqcalled           : boolean;
+ p                   : pointer;
+ key                 : char;
 
- WSStext        : WSSAdress;
- SBtext         : SBAdress;
- MPUtext        : MPUAdress;
- CDtext         : CDAdress;
+ WSStext             : WSSAdress;
+ SBtext              : SBAdress;
+ MPUtext             : MPUAdress;
+ CDtext              : CDAdress;
 
-
- cfg            : OPTI929config;
+ cfg                 : OPTI929config;
  SBFreq,
- WSSFreq        : Freqconfig;
- CodecVolumes   : Volumes;
- f              : file;
+ WSSFreq             : Freqconfig;
+ CodecVolumes        : Volumes;
+ f                   : file;
 
- ocnt,size,bpos,cpos  : word;
- s,newblaster,dir,
- initstr,backup       : string;
- found                : boolean;
- DirInfo              : SearchRec;
- Error                : word;
- keyboardmode         : boolean;
- apage                : byte;
+ ocnt,
+ size,
+ bpos,
+ cpos                : word;
+ s,
+ newblaster,
+ dir,
+ initstr,
+ backup              : string;
+ found               : boolean;
+ DirInfo             : SearchRec;
+ Error               : word;
+ keyboardmode        : boolean;
+ apage               : byte;
+
 
  Procedure DrawSelector(xp,yp : byte; s : string);
  begin
@@ -195,7 +201,6 @@ var
     end;
   end;
  end;
-
 
 
  Procedure UnSelectItem(sel : byte);
@@ -280,7 +285,6 @@ var
 
 
 
-
  Procedure SelectItem(sel : byte);
  var x,y,l : byte;
  begin
@@ -362,8 +366,7 @@ var
 end;
 
 
-
- Procedure HLine(y : byte);
+Procedure HLine(y : byte);
  begin
   putchar(4,y,#199,15,1);
   for cnt := 5 to 77 do
@@ -371,7 +374,7 @@ end;
   putchar(77,y,#182,15,1);
  end;
 
- Procedure Button(x,y : byte; name : string; pressed : boolean);
+Procedure Button(x,y : byte; name : string; pressed : boolean);
  var col,c : byte;
  begin
   if pressed then col := 1 else col := 0;
@@ -379,8 +382,8 @@ end;
   c := 1;
   while (name[c] = ' ') and (c <= length(name)) do inc(c);
   putchar(x+(c-1),y,name[c],4,7);
-  for c := x+1 to x+length(name) do fastwrite(c,y+1,col,1, 'ﬂ');
-  fastwrite(x+length(name),y,col,1, '‹');
+  for c := x+1 to x+length(name) do fastwrite(c,y+1,col,1, '√ü');
+  fastwrite(x+length(name),y,col,1, '√ú');
  end;
 
  Procedure Wait_for_Mousebutton;
@@ -483,40 +486,40 @@ Procedure SetStandardcfg;
 begin
  with cfg do
  begin
-  initmode    := 0;   {Modus SB/WSS}
-  powerdwn    := 0;   {Stromsparmodus}
-  silence     := 0;   {Mute off}
+  initmode    := 0;   {Set SB or WSS mode?}
+  powerdwn    := 0;   {Enable/Disable Powerdown mode}
+  silence     := 0;   {Enable/Disable silence mode}
   Cfix        := 0;   {We assume an Analog Devices codec}
   shprotect   := 0;   {Shadow Register protection off}
   access      := 0;   {No access to codec in SB Mode}
   wave        := 1;
 
-  CDTYPE      := $FF; {CD-ROm off}
-  CDBASE      := $340; {Port fÅr CD-ROM}
-  CDIRQ       := $FF; {IRQ fÅr CD-ROM}
-  CDDMA       := 3;   {DMA fÅr CD-ROM}
+  CDTYPE      := $FF;  {FF = disable CD-ROM }
+  CDBASE      := $340; {Port for CD-ROM}
+  CDIRQ       := $FF; {IRQ for CD-ROM}
+  CDDMA       := 3;   {DMA channel for CD-ROM}
 
   SBBASE      := $220;   {SB Port}
   SBIRQ       := 5;   {SB IRQ}
   SBDMA       := 1;   {SB DMA}
   SBVER       := 3;   {SB Version}
-  FMAP        := 0;   {SB Frequencymapping}
-  FIFO        := 0;   {Command FiFo in SB Mode on}
+  FMAP        := 0;   {Simple SB Frequencymapping}
+  FIFO        := 0;   {Disable command FiFo in SB Mode}
   SBMIX       := 1;   {Enable Sound Blaser Mixer chip emulation}
-  AUTOVOL     := 0;   {Automatic volume control}
-  ADPCM       := 1;   {Enable ADPCM}
-  TIMEOUT     := 1;
-  DMAWD       := 0;
-  ATTN        := 1;
+  AUTOVOL     := 0;   {Disabel Automatic volume control}
+  ADPCM       := 1;   {Enable ADPCM support}
+  TIMEOUT     := 1;   {Enable timeout acknowledge
+  DMAWD       := 0;   {Disable DMA watch dog}
+  ATTN        := 1;   {Enable Attenuation }
 
   WSSBase     := $530; {WSS Port}
-  WSSDMA      := 1;    {WSS playback DMA 1}
-  WSSIRQ      := $FF;  {WSS Auto IRQ}
+  WSSDMA      := 1;    {WSS DMA channel 1}
+  WSSIRQ      := $FF;  {Auto IRQ selection for WSS}
 
   GPEN        := 1;   {GamePort enabled}
-  GPMODE      := 1;   {Game Port Timer.  0 fÅr Extern, 1 fÅr Intern}
-  OUTMX       := 0;   {Timing mode OPL3SCn}
-  GPOUT       := 0;   {General purpose output disabled}
+  GPMODE      := 1;   {Select internal Game Port Timer}
+  OUTMX       := 0;   {.. and timing mode OPL3SCn}
+  GPOUT       := 0;   {General Purpose outputs disabled}
   OPL         := 3;   {OPL 3 FM}
   FMCLK       := 3;   {OPL 3 clock}
 
@@ -656,9 +659,9 @@ begin
 
  InitMenuScreen(title);
  Window(4,3,77,23,15,1,true);
- putchar(40,3,'—',15,1);
+ putchar(40,3,'√ë',15,1);
  for cnt := 4 to 19 do
- putchar(40,cnt,'≥',15,1);
+ putchar(40,cnt,'¬≥',15,1);
 
  fastwrite(9,4,14,1,'Sound Blaster configuration');
  fastwrite(9,6,15,1,'Address:');
@@ -685,7 +688,7 @@ begin
  Drawselector(58,8,WSS_DMA[wsstext.dma]);
 
  HLine(12);
- putchar(40,12,'≈',15,1);
+ putchar(40,12,'√Ö',15,1);
 
  fastwrite(9,13,14,1,'MPU401 configuration');
  fastwrite(9,15,15,1,'Enable MPU401 [ ]');
@@ -724,8 +727,8 @@ begin
 
 
  HLine(20);
- putchar(40,20,'≈',15,1);
- putchar(40,20,'¡',15,1);
+ putchar(40,20,'√Ö',15,1);
+ putchar(40,20,'√Å',15,1);
  Button(13,21,'Advanced Options',false);
  Button(34,21,'Test Settings',false);
  Button(52,21,'Save and quit',false);
@@ -1460,11 +1463,11 @@ begin
 
    if length(s) >= length(newblaster) then
    begin
-    for dummy := 1 to length(s) do       {Alten Eintrag lîschen}
+    for dummy := 1 to length(s) do       {Alten Eintrag l¬îschen}
     begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := 0;
     end;
-    for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfÅgen}
+    for dummy := 1 to length(newblaster) do       {Neuen Eintrag einf¬Ågen}
     begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
     end;
@@ -1477,7 +1480,7 @@ begin
    else
    begin
      move(ptr(seg(p^),ofs(p^)+bpos+length(s))^,ptr(seg(p^),ofs(p^)+bpos+length(newblaster))^,size-(bpos+length(s)));
-     for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfÅgen}
+     for dummy := 1 to length(newblaster) do       {Neuen Eintrag einf¬Ågen}
      begin
       mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
      end;
@@ -1505,7 +1508,7 @@ begin
         ptr(seg(p^),ofs(p^)+(bpos+length(newblaster)))^,
         size-bpos);
 
-   for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfÅgen}
+   for dummy := 1 to length(newblaster) do       {Neuen Eintrag einf¬Ågen}
    begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
    end;
@@ -1536,7 +1539,7 @@ begin
         ptr(seg(p^),ofs(p^)+(cpos+length(initstr)))^,
         size-cpos);
 
-   for dummy := 1 to length(initstr) do       {Neuen Eintrag einfÅgen}
+   for dummy := 1 to length(initstr) do       {Neuen Eintrag einf¬Ågen}
    begin
      mem[seg(p^):ofs(p^)+cpos+(dummy-1)] := ord(initstr[dummy]);
    end;
