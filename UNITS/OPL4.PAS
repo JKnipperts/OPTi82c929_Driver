@@ -45,8 +45,8 @@ end;
 Procedure Addrdelay;
 assembler;
 asm
-   mov     cx, 6           {6 Wiederhohlungen = 3.3 microsekunden}
-   mov     dx, opl4_fm_port        {Adlib Port (388h)}
+   mov     cx, 6           
+   mov     dx, opl4_fm_port 
 
 @delayloop1:
    in      al, dx
@@ -58,8 +58,8 @@ end;
 Procedure Datadelay;
 assembler;
 asm
-   mov     cx, 35          {35 Wiederhohlungen = 23 microsekunden}
-   mov     dx, opl4_fm_port     {Adlib Port (388h)}
+   mov     cx, 35          
+   mov     dx, opl4_fm_port
 
 @delayloop2:
    in      al, dx
