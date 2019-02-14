@@ -1,5 +1,5 @@
 {Low level driver for OPTi 82C929A controller chip
- V 1.0 (c) 23.12.2018 by Jan Knipperts
+ V 1.21 (c) 10.02.2019 by Jan Knipperts
 
 Inspired by MAD16.C by Hannu Savolainen}
 
@@ -39,41 +39,47 @@ const
 
 type
 OPTI929config       = record
-  initmode    : byte;   {SB / WSS mode }
-  powerdwn    : byte;   {Power down mode }
-  fmclk       : byte;   {Use OPL2 or OPL3 clock for FM-Chip}
-  OPL         : byte;   {0 = Yamaha YMF262 (OPL3) FM Sound, 1 = Yamaha YMF278 (OPL4) Wavetable}
-  silence     : byte;   {Complete mute on/off}
-  Cfix        : byte;   {Enabale longer I/O waits for Crystal Codecs}
+ initmode    : byte;   {Modus SB/WSS}
+  powerdwn    : byte;   {Power down mode}
+  fmclk       : byte;   {OPL 2 or OPL 3 clock for FM?}
+  silence     : byte;   {Mute on/off}
+  Cfix        : byte;   {Delay fix for Crystal Chips}
   shprotect   : byte;   {Shadow Register protection}
-  access      : byte;   {Enable/Disable access to codec in SB mode}
+  access      : byte;   {Access to codec in SB Moe?}
 
   CDTYPE      : byte;
-  CDBASE      : word;   {Base I/O port for CD-ROM}
-  CDIRQ       : byte;   {IRQ to use for CD-ROM}
-  CDDMA       : byte;   {DMA channel for CD-ROM}
+  CDBASE      : word;   {Port fr CD-ROM}
+  OPL         : byte;   {OPL 3/4}
+  CDIRQ       : byte;   {IRQ fr CD-ROM}
+  CDDMA       : byte;   {DMA fr CD-ROM}
 
-  SBBase      : word;   {SB I/O Port}
+  SBBase      : word;   {SB Port}
   SBIRQ       : byte;   {SB IRQ}
   SBDMA       : byte;   {SB DMA}
-  FMAP        : byte;   {SB Frequencymapping - use one or both xtals}
+  FMAP        : byte;   {SB Frequencymapping with one/both xtals}
   SBVER       : byte;   {SB DSP Version}
   FIFO        : byte;   {SB command FIFO}
   ADPCM       : byte;   {SB ADPCM support}
-  SBMIX       : byte;   {SB automatic volume control and mixer emualtaion}
+  AUTOVOL     : byte;   {Automatic volume control (0 = on)}
+  SBMIX       : byte;   {SB mixer voice volume emulaton}
+  TIMEOUT     : byte;   {Time out ack}
 
-  WSSBase     : word;   {WSS I/O Port}
-  WSSDMA      : byte;   {WSS DMA}
+  WSSBase     : word;   {WSS Port}
+  WSSDMA      : byte;   {WSS playback DMA}
   WSSIRQ      : byte;   {WSS IRQ}
 
-  GPEN        : byte;   {Enable / Disable GamePort}
-  GPMode      : byte;   {Game Port Timer.  0 = Externaö, 1 = Internal}
-  GPOUT       : byte;   {Enable / Disable General purpose output}
-  OUTMX       : byte;   {Mix outputs}
+  GPEN        : byte;   {GamePort an/aus}
+  GPMode      : byte;   {Game Port Timer.  0 fr Extern, 1 fr Intern}
+  GPOUT       : byte;   {General purpose output}
+  OUTMX       : byte;   {Mix Midi / gameport outputs}
 
-  MPU401      : byte;  {Enable / Disable MPU401 }
-  MPUBASE     : word;  {MPU401 I/OO Port}
+  MPU401      : byte;  {MPU401 an/aus}
+  MPUBASE     : word;  {MPU401 Port}
   MPUIRQ      : byte;  {MPU401 IRQ}
+
+  DMAWD       : byte; {Enable/Disable DMA Watchdog}
+  WAVE        : byte;  {Enable/Disable WAVE}
+  ATTN        : byte;  {Enable/Disable attunation}
  end;
 
 var
@@ -124,6 +130,9 @@ Procedure Silence929(on : boolean);
 
 Procedure SBMixer(on : boolean);
 {Enable/Disbale Mixer emulation and automatic volume control in SB Mode}
+
+Procedure AUTOVOL(on : boolean);
+{To enable/disable Automatic volume contron}
 
 Procedure SBADPCM(on : boolean);
 {Enable/Disbale ADPC decompression feature}
@@ -180,13 +189,13 @@ begin
 
  if (getbit(mc1data,4) = 1) and (getbit(mc1data,5) = 0) then
   Base := $E80;
- 
+
  if (getbit(mc1data,4) = 0) and (getbit(mc1data,5) = 1) then
   Base := $F40;
- 
+
  if (getbit(mc1data,4) = 1) and (getbit(mc1data,5) = 1) then
   Base := $604;
- 
+
  CODECBase := base;
 end;
 
@@ -200,7 +209,7 @@ begin
 
   tmp := read929(MC1_PORT);
 
-if (tmp = $FF) then {Unfortunately we get only bus float... }
+   if (tmp = $FF) then {Unfortunately we get only bus float... }
    begin
         Detect929 := false;
         exit;
@@ -215,19 +224,8 @@ if (tmp = $FF) then {Unfortunately we get only bus float... }
     Detect929 := false;
     exit;
    end;
-   
-   {First hurdle cleared, password is correct and the chip works as expected}
 
-{Finally let's check the revisionid bits in register MC3. Just to be save}
-   tmp3 := read929(MC3_PORT);
-   {Bits 0 and 1 store the ID of the 82C929.
-    Should be "10" for 82C929A}
-
-   if (getbit(tmp3,0) <> 0) and (getbit(tmp3,1) <> 1) then
-   begin
-    Detect929 := false;
-    exit;
-   end;
+   {Password is correct and the chip works as expected}
 
    Detect929 := true;
 end;
@@ -263,7 +261,6 @@ end;
     wss_cfg := wss_cfg or wss_dma;
     if cfg.wssirq = $FF then set_bit(wss_cfg,6,true); {auto interrupt select}
     if getbit(port[cfg.WSSbase],7) = 1 then set_bit(wss_cfg,7,true);
-
     port[cfg.WSSbase] := wss_cfg;
   end;
 
@@ -354,7 +351,7 @@ begin
   set_bit(mc1data,0,false) {1 means off here}
  else
   set_bit(mc1data,0,true);
- 
+
  mc2data := 0;
 
  case cfg.CDBASE of
@@ -533,34 +530,27 @@ end;
 
  mc4data := 0;
 
- set_bit(mc4data,7,true);     {reserved bits}
- set_bit(mc4data,5,true);
+ if cfg.adpcm = 1 then set_bit(mc4data,7,true);
+ if cfg.gpout = 1 then set_bit(mc4data,6,true);
+ if cfg.timeout = 1 then set_bit(mc4data,5,true);
+ if cfg.outmx = 1 then set_bit(mc4data,4,true);
+ if cfg.fmclk = 2 then set_bit(mc4data,3,true);
  if cfg.silence = 1 then set_bit(mc4data,2,true);   {silence}
 
- if cfg.gpout > 0 then set_bit(mc4data,6,true);
- if cfg.outmx > 0 then set_bit(mc4data,4,true);
- if cfg.fmclk = 2 then set_bit(mc4data,3,true);
 
-
- set_bit(mc5data,7,true);     {set reserved bits of MC5}
- set_bit(mc5data,6,false);
- set_bit(mc5data,2,true);
- set_bit(mc5data,0,true);
-
-
+ mc5data := 0;
+ if cfg.autovol = 0 then set_bit(mc5data,7,true);
+ set_bit(mc5data,6,false);   {OPL5, reserved bits of MC5}
  if cfg.shprotect = 1 then  set_bit(mc5data,5,true);
  if cfg.access = 1 then  set_bit(mc5data,4,true);
-
  if cfg.fifo = 1 then  set_bit(mc5data,3,true);
+ if cfg.sbmix = 1 then  set_bit(mc5data,2,true);
  if cfg.cfix = 1 then  set_bit(mc5data,1,true);
+ set_bit(mc5data,0,true);   {reserved CDFTOEN}
+
+
 
  mc6data := 0;
-
- {Set the reserved bits of byte 6}
- set_bit(mc6data,2,false);
- set_bit(mc6data,1,true);
- set_bit(mc6data,0,true);
-
 
  if cfg.mpu401 = 1 then  set_bit(mc6data,7,true);
 
@@ -617,6 +607,11 @@ end;
 
  end;
 
+
+ if cfg.dmawd = 1 then set_bit(mc6data,2,true);
+ if cfg.wave = 1 then set_bit(mc6data,1,true);
+ if cfg.attn = 1 then set_bit(mc6data,0,true);
+
 {Write new values to the chip}
  write929(MC1_PORT,mc1data);
  write929(MC2_PORT,mc2data);
@@ -624,14 +619,14 @@ end;
  write929(MC4_PORT,mc4data);
  write929(MC5_PORT,mc5data);
  write929(MC6_PORT,mc6data);
- 
+
  {Calculate addresses for codec access}
  CODEC.WSSPort := cfg.WSSBase;
  CODEC.ADDR    := cfg.WSSBase+4;
  CODEC.DATA    := cfg.WSSBase+5;
  CODEC.STATUS  := cfg.WSSBase+6;
  CODEC.PIO     := cfg.WSSBase+7;
- 
+
  {Set up the WSS main I/O port}
  SetupWSSPort(cfg);
 end;
@@ -679,12 +674,23 @@ begin
  mc5data := read929(MC5_PORT);
  mc6data := read929(MC6_PORT);
 
- fillchar(cfg,sizeof(cfg),0);
+
+{MC1}
 
  if getbit(mc1data,7) = 1 then cfg.initmode := 1;  {WSS mode}
  if getbit(mc1data,6) = 1 then cfg.powerdwn := 1;  {powerdown}
- if getbit(mc1data,0) = 0 then cfg.gpen := 1;  {Gameport enable (1 means off here)}
- if getbit(mc3data,3) = 1 then cfg.fmap := 1; {Frequency Mapping}
+
+ if (getbit(mc1data,4) = 0) and (getbit(mc1data,5) = 0) then
+ cfg.WSSBase := $530;
+
+ if (getbit(mc1data,4) = 1) and (getbit(mc1data,5) = 0) then
+ cfg.WSSBase := $E80;
+
+ if (getbit(mc1data,4) = 0) and (getbit(mc1data,5) = 1) then
+ cfg.WSSBase := $F40;
+
+ if (getbit(mc1data,4) = 1) and (getbit(mc1data,5) = 1) then
+ cfg.WSSBase := $604;
 
 
 
@@ -710,11 +716,15 @@ begin
  and (getbit(mc1data,1) = 0) then
      cfg.CDTYPE := IDE;
 
-
  if (getbit(mc1data,3) = 0)
  and (getbit(mc1data,2) = 0)
  and (getbit(mc1data,1) = 0) then
      cfg.CDTYPE := $FF;
+
+ if getbit(mc1data,0) = 0 then cfg.gpen := 1;  {Gameport enable (1 means off here)}
+
+
+ {MC2}
 
 
  {CD I/O-Port}
@@ -731,21 +741,12 @@ begin
  if (getbit(mc2data,7) = 1) and (getbit(mc2data,6) = 1) then
      cfg.CDBASE := $320;
 
+ {FM Chip}
 
- {CD DMA}
-
- if (getbit(mc2data,0) = 0) and (getbit(mc2data,1) = 0) then
-     cfg.CDDMA := 3;
-
- if (getbit(mc2data,0) = 0) and (getbit(mc2data,1) = 1) then
-     cfg.CDDMA := 0;
-
- if (getbit(mc2data,0) = 1) and (getbit(mc2data,1) = 0) then
-     cfg.CDDMA := 1;
-
- if (getbit(mc2data,0) = 1) and (getbit(mc2data,1) = 1) then
-     cfg.CDDMA := $FF;
-
+ if (getbit(mc2data,5) = 1) then
+ cfg.opl := 4
+ else
+ cfg.opl := 3;
 
  {CD IRQ}
 
@@ -785,117 +786,21 @@ begin
      cfg.CDIRQ := $FA;                 {Chip-Test-Mode}
 
 
- {WSS:}
+ {CD DMA}
 
- {WSS Base}
+ if (getbit(mc2data,0) = 0) and (getbit(mc2data,1) = 0) then
+     cfg.CDDMA := 3;
 
-   if (getbit(mc1data,4) = 0) and (getbit(mc1data,5) = 0) then
-     cfg.WSSBase := $530;
+ if (getbit(mc2data,0) = 0) and (getbit(mc2data,1) = 1) then
+     cfg.CDDMA := 0;
 
-   if (getbit(mc1data,4) = 1) and (getbit(mc1data,5) = 0) then
-     cfg.WSSBase := $E80;
+ if (getbit(mc2data,0) = 1) and (getbit(mc2data,1) = 0) then
+     cfg.CDDMA := 1;
 
-   if (getbit(mc1data,4) = 0) and (getbit(mc1data,5) = 1) then
-     cfg.WSSBase := $F40;
+ if (getbit(mc2data,0) = 1) and (getbit(mc2data,1) = 1) then
+     cfg.CDDMA := $FF;
 
-   if (getbit(mc1data,4) = 1) and (getbit(mc1data,5) = 1) then
-     cfg.WSSBase := $604;
-
-
-   wssdata := port[cfg.WSSbase];
-
-   {WSS IRQ}
-
-
-   if (getbit(wssdata,3) = 0) and
-      (getbit(wssdata,4) = 0) and
-      (getbit(wssdata,5) = 0) then
-     cfg.WSSIrq := $FF;
-
-   if (getbit(wssdata,3) = 1) and
-      (getbit(wssdata,4) = 0) and
-      (getbit(wssdata,5) = 0) then
-     cfg.WSSIrq := 7;
-
-   if (getbit(wssdata,3) = 0) and
-      (getbit(wssdata,4) = 1) and
-      (getbit(wssdata,5) = 0) then
-     cfg.WSSIrq := 9;
-
-   if (getbit(wssdata,3) = 1) and
-      (getbit(wssdata,4) = 1) and
-      (getbit(wssdata,5) = 0) then
-      cfg.WSSIrq := 10;
-
-   if (getbit(wssdata,3) = 0) and
-      (getbit(wssdata,4) = 0) and
-      (getbit(wssdata,5) = 1) then
-      cfg.WSSIrq := 11;
-
-
-
-
-  {WSS DMA}
-
-   if (getbit(wssdata,0) = 0) and
-      (getbit(wssdata,1) = 0) and
-      (getbit(wssdata,2) = 0) then
-   begin
-     cfg.WSSDMA  := $FF;
-   end;
-
-   if (getbit(wssdata,0) = 1) and
-      (getbit(wssdata,1) = 0) and
-      (getbit(wssdata,2) = 0) then
-   begin
-     cfg.WSSDMA  := 0;
-   end;
-
-   if (getbit(wssdata,0) = 0) and
-      (getbit(wssdata,1) = 1) and
-      (getbit(wssdata,2) = 0) then
-   begin
-     cfg.WSSDMA  := 1;
-   end;
-
-   if (getbit(wssdata,0) = 1) and
-      (getbit(wssdata,1) = 1) and
-      (getbit(wssdata,2) = 0) then
-   begin
-     cfg.WSSDMA  := 3;
-   end;
-
-
-   if (getbit(wssdata,0) = 0) and
-      (getbit(wssdata,1) = 0) and
-      (getbit(wssdata,2) = 1) then
-   begin
-     cfg.WSSDMA  := $FF;
-   end;
-
-   if (getbit(wssdata,0) = 1) and
-      (getbit(wssdata,1) = 0) and
-      (getbit(wssdata,2) = 1) then
-   begin
-     cfg.WSSDMA  := 0;
-   end;
-
-   if (getbit(wssdata,0) = 0) and
-      (getbit(wssdata,1) = 1) and
-      (getbit(wssdata,2) = 1) then
-   begin
-     cfg.WSSDMA  := 1;
-   end;
-
-   if (getbit(wssdata,0) = 1) and
-      (getbit(wssdata,1) = 1) and
-      (getbit(wssdata,2) = 1) then
-   begin
-     cfg.WSSDMA  := 3;
-   end;
-
- {SB}
-
+ {MC3}
 
  {SB IRQ}
  if (getbit(mc3data,6) = 0) and (getbit(mc3data,7) = 0) then
@@ -925,33 +830,24 @@ begin
  if (getbit(mc3data,4) = 1) and (getbit(mc3data,5) = 1) then
   cfg.SBdma := $FF;
 
+
+ if (getbit(mc3data,3) = 1) then cfg.fmap := 1;
+
  if (getbit(mc3data,2) = 1) then
- begin
-  cfg.sbbase := $240;
- end
+  cfg.sbbase := $240
  else
- begin
   cfg.sbbase := $220;
- end;
 
- if (getbit(mc4data,3) = 1) then
- begin
-  cfg.opl := 2;
- end
- else
- begin
-  cfg.opl := 3;
- end;
+  {Gpmode can not be read. Readig bits 0 and 1 gives chip revision}
+  cfg.gpmode := 0; {we assume internal timer}
 
- if (getbit(mc6data,7) = 1) then
- begin
-  cfg.mpu401 := 1;
- end
- else
- begin
-  cfg.mpu401 := 0;
- end;
-
+ {MC4}
+ if (getbit(mc4data,7) = 1) then cfg.adpcm := 1;
+ if (getbit(mc4data,6) = 1) then cfg.gpout := 1;
+ if (getbit(mc4data,5) = 1) then cfg.timeout := 1;
+ if (getbit(mc4data,4) = 1) then cfg.outmx := 1;
+ if (getbit(mc4data,3) = 1) then cfg.fmclk := 1;
+ if (getbit(mc4data,2) = 1) then cfg.silence := 1;
  if (getbit(mc4data,0) = 1) and (getbit(mc4data,1) = 0) then
  begin
   cfg.SBver := 1;
@@ -969,72 +865,19 @@ begin
   cfg.SBver := 4;
  end;
 
- if (getbit(mc4data,6) = 1) then
- begin
-  cfg.gpout := 1;
- end
- else
- begin
-  cfg.gpout := 0;
- end;
+ {MC5}
+ if (getbit(mc5data,7) = 0) then cfg.autovol := 1; {low means active here}
+{ if (getbit(mc5data,6) = 1) then cfg.opl5 := 1; {select the OPL5 address decoding}
+ if (getbit(mc5data,5) = 1) then cfg.shprotect := 1;
+ if (getbit(mc5data,4) = 1) then cfg.access := 1;
+ if (getbit(mc5data,3) = 1) then cfg.fifo := 1;
+ if (getbit(mc5data,2) = 1) then cfg.sbmix := 1;
+ if (getbit(mc5data,1) = 1) then cfg.cfix := 1;
+{ if (getbit(mc5data,0) = 1) then cfg.cdftoen := 1;}
 
- if (getbit(mc4data,4) = 1) then
- begin
-  cfg.outmx := 1;
- end
- else
- begin
-  cfg.outmx := 0;
- end;
+ {MC6}
 
-
-
- if (getbit(mc5data,5) = 1) then
- begin
-  cfg.shprotect := 1;
- end
- else
- begin
-  cfg.shprotect := 0;
- end;
-
- if (getbit(mc5data,4) = 1) then
- begin
-  cfg.access := 1;
- end
- else
- begin
-  cfg.access := 0;
- end;
-
- if (getbit(mc5data,3) = 1) then
- begin
-  cfg.fifo := 1;
- end
- else
- begin
-  cfg.fifo := 0;
- end;
-
- if (getbit(mc5data,1) = 1) then
- begin
-  cfg.cfix := 1;
- end
- else
- begin
-  cfg.cfix := 0;
- end;
-
- if (getbit(mc6data,7) = 1) then
- begin
-  cfg.mpu401 := 1;
- end
- else
- begin
-  cfg.mpu401 := 0;
- end;
-
-
+ if (getbit(mc6data,7) = 1) then cfg.mpu401 := 1;
  if (getbit(mc6data,5) = 0) and (getbit(mc6data,6) = 0) then
  begin
   cfg.MPUbase := $330;
@@ -1051,25 +894,25 @@ begin
  begin
   cfg.MPUbase := $300;
  end;
-
-
- if (getbit(mc6data,3) = 0) and (getbit(mc6data,4) = 0) then
- begin
-  cfg.MPUIRQ := 9;
- end;
  if (getbit(mc6data,3) = 1) and (getbit(mc6data,4) = 0) then
  begin
   cfg.MPUIRQ := 10;
  end;
- if (getbit(mc6data,3) = 0) and (getbit(mc6data,4) = 1) then
+ if (getbit(mc6data,3) = 0) and (getbit(mc6data,4) = 0) then
  begin
-  cfg.MPUIRQ := 5;
+  cfg.MPUIRQ := 9;
  end;
  if (getbit(mc6data,3) = 1) and (getbit(mc6data,4) = 1) then
  begin
   cfg.MPUIRQ := 7;
  end;
-
+ if (getbit(mc6data,3) = 0) and (getbit(mc6data,4) = 1) then
+ begin
+  cfg.MPUIRQ := 5;
+ end;
+ if (getbit(mc6data,2) = 1) then cfg.dmawd := 1; {DMA Watch Dog enable}
+ if (getbit(mc6data,1) = 1) then cfg.wave := 1;
+ if (getbit(mc6data,0) = 1) then cfg.attn := 1;
 end;
 
 
@@ -1095,8 +938,32 @@ begin
  mc1data := 0;
  set_bit(mc1data,7,false); {set SB Pro mode}
  if cfg.powerdwn = 1 then set_bit(mc1data,6,true); {powerdown mode}
- set_bit(mc1data,4,false); {WSS Base is not used this time}
- set_bit(mc1data,5,false);
+
+ case cfg.WSSbase of
+   $530:
+    begin
+     set_bit(mc1data,4,false);
+     set_bit(mc1data,5,false);
+    end;
+
+   $E80:
+    begin
+     set_bit(mc1data,4,true);
+     set_bit(mc1data,5,false);
+    end;
+
+   $F40:
+    begin
+     set_bit(mc1data,4,false);
+     set_bit(mc1data,5,true);
+    end;
+
+   $604:
+   begin
+     set_bit(mc1data,4,true);
+     set_bit(mc1data,5,true);
+    end;
+ end;
 
 
 case cfg.CDTYPE of
@@ -1324,14 +1191,15 @@ end;
  end;
 
  if cfg.fmap = 1 then set_bit(mc3data,3,true);
- if cfg.gpmode = 1 then set_bit(mc3data,1,true);    
  if cfg.sbbase = $240 then set_bit(mc3data,2,true);
+ if cfg.gpmode = 1 then set_bit(mc3data,1,true);
+
 
  mc4data := 0;
  if cfg.adpcm = 1 then set_bit(mc4data,7,true);
- if cfg.gpout > 0 then set_bit(mc4data,6,true);
- set_bit(mc4data,5,true); {Time Out ACK, reserved must be 1}
- if cfg.outmx > 0 then set_bit(mc4data,4,true); 
+ if cfg.gpout = 1 then set_bit(mc4data,6,true);
+ if cfg.timeout = 1 then set_bit(mc4data,5,true);
+ if cfg.outmx = 1 then set_bit(mc4data,4,true);
  if cfg.fmclk = 2 then set_bit(mc4data,3,true);
  if cfg.silence = 1 then set_bit(mc4data,2,true);   {silence}
 
@@ -1365,19 +1233,17 @@ end;
 
 
  mc5data := 0;
-
- {Reserved Bits of byte 5}
-
- if cfg.sbmix = 1 then set_bit(mc5data,7,true);
- set_bit(mc5data,6,false);   {reserved. OPL5 Adress decoding disabled}
+ if cfg.autovol = 0 then set_bit(mc5data,7,true);
+ set_bit(mc5data,6,false);   {OPL5, reserved bits of MC5}
  if cfg.shprotect = 1 then  set_bit(mc5data,5,true);
- set_bit(mc5data,4,false); {Codec access blocked in SB Mode}
+ if cfg.access = 1 then  set_bit(mc5data,4,true);
  if cfg.fifo = 1 then  set_bit(mc5data,3,true);
- if cfg.sbmix = 1 then set_bit(mc5data,2,true); {SB PRO mixer voice volume emulation (PEN)}
+ if cfg.sbmix = 1 then  set_bit(mc5data,2,true);
  if cfg.cfix = 1 then  set_bit(mc5data,1,true);
- set_bit(mc5data,0,true);  {CDFTOEN}
+ set_bit(mc5data,0,true);   {reserved CDFTOEN}
 
  mc6data := 0;
+
  if cfg.mpu401 = 1 then  set_bit(mc6data,7,true);
 
  case cfg.MPUbase of
@@ -1434,9 +1300,9 @@ end;
  end;
 
  {Reserved bits of byte 6}
- set_bit(mc6data,2,false);    {DRQTM, DMA Watch Dog}
- set_bit(mc6data,1,true);     {Enable / Disable WAVE}
- set_bit(mc6data,0,true);     {ATTN? Must be 1}
+ if cfg.dmawd = 1 then set_bit(mc6data,2,true); {DRQTM, DMA Watch Dog}
+ if cfg.wave = 1 then set_bit(mc6data,1,true); {Enable / Disable WAVE}
+ if cfg.attn = 1 then set_bit(mc6data,0,true); {ATTN? Must be 1}
 
 
  write929(MC1_PORT,mc1data);
@@ -1451,7 +1317,7 @@ end;
 
 Procedure SetInitValues;
 {Sets the default values from the data sheet.}
- 
+
 var mc1data,
     mc2data,
     mc3data,
@@ -1460,9 +1326,9 @@ var mc1data,
     mc6data  : byte;
 
 begin
- mc1data := 0;
- mc2data := 3;
- mc3data := 2;
+ mc1data := $00;
+ mc2data := $03;
+ mc3data := $02;
  mc4data := $A2;
  mc5data := $25; { $2F for Crystal Codec}
  mc6data := $83;
@@ -1534,13 +1400,27 @@ begin
 end;
 
 Procedure SBMixer(on : boolean);
-{Enable/Disbale the simulation of the Sound Blaster Pro Mixer chip}
+{To enable/disable the volume effect for Sound Blaster Pro mixer voice volume emulation}
 var dummy : byte;
 begin
  dummy := 0;
  dummy := read929(MC5_PORT);
- set_bit(dummy,2,on);  {Enable/Disable mixer emulation}
- set_bit(dummy,7,on);  {Enable/Disable automatic volume control}
+ set_bit(dummy,2,on);  {Enable/Disable EPEN}
+ write929(MC5_PORT,dummy);
+end;
+
+Procedure AUTOVOL(on : boolean);
+{To enable/disable Automatic volume contron}
+var dummy : byte;
+begin
+ dummy := 0;
+ dummy := read929(MC5_PORT);
+
+ if on = true then
+ set_bit(dummy,2,false)   {active = low}
+ else
+ set_bit(dummy,2,true);
+
  write929(MC5_PORT,dummy);
 end;
 

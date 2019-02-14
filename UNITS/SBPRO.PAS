@@ -1,7 +1,7 @@
 Unit SBPro;
 {Unit to handle the Sound Blaster Pro
 
-v0.4 - July 2001 by Jan Knipperts}
+v 0.4 (c) 2001 by Jan Knipperts}
 
 interface
 uses misc,dos,crt;

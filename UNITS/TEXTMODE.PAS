@@ -1,7 +1,6 @@
 Unit Textmode;
-{Unit to replace Borlands crt unit and to provide very fast drawing routines for the 80x25 textmode}
-{Version 1.61 - 12.07.1998
- Some improvements made 24.01.2019}
+{Diese Unit enthÑlt nÅtzliche Proceduren zum Zeichnen von MenÅs im Textmodus}
+{Version 1.61 - 24.01.19 }
 
 interface
 uses dos;
@@ -326,53 +325,71 @@ Procedure Mouse_SetHLimits(xmin, xmax : Word);
 { set horizontal limits }
 assembler;
  asm
+  cmp mouse_there,0
+  je  @fail
   mov ax,7
   mov cx,xmin
   mov dx,xmax
   int $33
+  @fail:
  end;
 
 Procedure Mouse_SetVLimits(ymin, ymax : Word);
 { set vertical limits }
 assembler;
  asm
+  cmp mouse_there,0
+  je  @fail
   mov ax,8
   mov cx,ymin
   mov dx,ymax
   int $33
+  @fail:
  end;
 
 Procedure Mouse_Show;
 assembler;
  asm
+  cmp mouse_there,0
+  je  @fail
   mov ax,1
   int $33
+  @fail:
  end;
 
 Procedure Mouse_Hide;
 assembler;
  asm
+  cmp mouse_there,0
+  je  @fail
   mov ax,2
   int $33
+  @fail:
  end;
 
 Procedure Mouse_Read;
 assembler;
  asm
+  cmp mouse_there,0
+  je  @fail
   mov ax,3
   int $33
   mov mouse.x,cx
   mov mouse.y,dx
   mov mouse.b,bl
+  @fail:
  end;
 
 Procedure Mouse_SetPos(x, y : Byte);
 assembler;
  asm
+  cmp mouse_there,0
+  je  @fail
   mov ax,4
   int $33
   mov mouse.x,cx
   mov mouse.y,dx
+  @fail:
  end;
 
 
