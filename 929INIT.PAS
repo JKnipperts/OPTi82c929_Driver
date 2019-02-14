@@ -2,14 +2,13 @@
 ******************************************************************************
 Low Level Initialization for Sound Cards with OPTi 82C929 and AD1848K Chipsets
 ******************************************************************************
-Version:    1.1 
-Date   :    02/01/2019
+Version:    1.2
 Author :    Jan Knipperts
 ******************************************************************************
 
 
 Program OPTI929_AD1848_Driver;
-uses opti929,mpu,opl,sbpro,ad1848,
+uses opti929,mpu,oplfm,opl4,sbpro,ad1848,
      dos,textmode,misc;
 
 
@@ -36,7 +35,7 @@ type
 
 const
 
- Title : string = 'Optimized MAD16 PRO soundcard initialisation Version 1.1';
+ Title : string = 'Optimized MAD16 PRO soundcard initialisation Version 1.2';
  Copyright : string = ' (c) 2019 by Jan Knipperts';
 
  error : array[1..11] of string =
@@ -80,30 +79,30 @@ begin
   textcolor(7);
   textbackground(0);
   writeln('');
-  write('Ãš');
+  write('Ú');
   for xc := 2 to 79 do
   begin
     gotoxy(xc,gety);
-    write('Ã„');
+    write('Ä');
   end;
-  write('Â¿');
-  write('Â³');
+  write('¿');
+  write('³');
   gotoxy(40-(length(title) div 2),gety);
   write(title);
   gotoxy(80,gety);
-  write('Â³');
-  write('Â³');
+  write('³');
+  write('³');
   gotoxy(40-(length(copyright) div 2),gety);
   write(copyright);
   gotoxy(80,gety);
-  write('Â³');
-  write('Ã€');
+  write('³');
+  write('À');
   for xc := 2 to 79 do
   begin
     gotoxy(xc,gety);
-    write('Ã„');
+    write('Ä');
   end;
-  write('Ã™');
+  write('Ù');
 end;
 
 
@@ -278,7 +277,7 @@ begin
   if (cfg.WSSBase <> $530) and
      (cfg.WSSBase <> $E80) and
      (cfg.WSSBase <> $F40) and
-     (cfg.WSSBase <> $604) then                {Invalid WS-Port in config file}
+     (cfg.WSSBase <> $604) then                {Wrong WS-Port in config file}
   begin
    writeln('');
    writeln(error[4]);
@@ -290,7 +289,7 @@ begin
      (cfg.WSSIRQ <> 9) and
      (cfg.WSSIRQ <> 10) and
      (cfg.WSSIRQ <> 11) and
-     (cfg.WSSIRQ <> $FF) then                  {Invalid WSS-IRQ in config file}
+     (cfg.WSSIRQ <> $FF) then                  {Wrong WSS-IRQ in config file}
   begin
    writeln('');
    writeln(error[5]);
@@ -341,7 +340,7 @@ begin
  if SB then
  begin
   SetSBMode(cfg);   {set controller back to SB Mode}
-  Protect_Shadowregs(true); {Disbale full access to the codec}
+ { Protect_Shadowregs(true); {Disbale full access to the codec}
  end;
  halt(1);
 end;
@@ -349,7 +348,7 @@ end;
  if SB then
  begin
   SetSBMode(cfg);   {set controller back to SB Mode}
-  Protect_Shadowregs(true); {Disbale full access to the codec}
+{  Protect_Shadowregs(true); {Disbale full access to the codec}
  end;
 
 end;
@@ -358,6 +357,8 @@ Procedure DetectController;
 begin
 
 if not quiet then write('Detecting OPTi 82C929A Soundcontroller - ');
+
+if not detect929 then setinitvalues; {if it failes, try to set defaults}
 
 if detect929 then
 begin
@@ -397,7 +398,7 @@ if not quiet then write('Initialize the Codec - ');
 
 Waitforcodec;   {Wait for codec to be ready...}
 
-if not Init_AD1848 then   {Codec initialisation failed!}
+if not Init_AD1848 then   {Codec initialization failed!}
 begin
   writeln('');
   writeln(error[1]);
@@ -423,6 +424,29 @@ begin
  writeln('');
  halt(1);
 end;
+
+{Init OPL3/OPL4}
+
+if cfg.opl = 4 then  {Do we assume an OPL4?}
+begin
+  if not OPL4_detect then   {but we don't find one...}
+  begin
+   cfg.opl := 3;     {Set OPL3 instead}
+   SetWSSMode(cfg);   {Reset controller}
+  end
+  else
+  begin
+   opl4_pcm(false); {Init OPL4 in FM mode}
+  end;
+end;
+
+if DetectOPL3 then    {if OPL3 is present..}
+begin
+  InitOPL;            {Initialize it..}
+  ClearOPL;           {and mute all channels, clear registers}
+end;
+
+
 
 
 if cfg.initmode = 0 then
@@ -480,10 +504,9 @@ end;
 {============================= Main program ============================}
 
 begin
- GetPath;         {Get the current directory to be able to find the configuration 
- file even if the program was started from Autoexec.bat}
+ GetPath;         {Get path to config file}
 
- {Handle the commandline options:}
+ {Handle commandline:}
  if FindOption('/INIT') then INIT := true;
  if FindOption('/SB') then SB := true;
  if FindOption('/WSS')  then WSS := true;
@@ -507,7 +530,7 @@ begin
  end;
 
 
-if not quiet then {Clear the screen if the "quiet" option is not enabled}
+  if not quiet then
   begin
     asm
      mov ax,03h                       {Set 80x25 Textmode}
@@ -515,7 +538,7 @@ if not quiet then {Clear the screen if the "quiet" option is not enabled}
     end;
   end;
 
-PrintTitle;  {Writes the title and copyright to the screen}
+  PrintTitle;
 
   if (init = false) and (wss = false) and
      (sb = false) and (info = false) then
@@ -543,10 +566,10 @@ PrintTitle;  {Writes the title and copyright to the screen}
 
   if not quiet then writeln('');
 
-if init then    {Do we have to initalize the soundcard?}
+  if init then
   begin
-  DetectController;  {Checks for OPTi 82C929}
-  InitSoundcard; {Initialize codec and set config}
+   DetectController;
+   InitSoundcard;
   end
   else
   begin
@@ -674,24 +697,12 @@ if init then    {Do we have to initalize the soundcard?}
    begin
 
     {Get Controller info}
-    write('Controller: OPTi 82C929A Revision ');
-    str(ChipRevision_929 div 10,s);
-    write(s+'.');
-    str(ChipRevision_929 mod 10,s);
-    writeln(s);
+    Getcfg(cfg);
+    writeln('');
 
 
     if SBMode = false then             {Are we in SB or WSS Mode?}
     begin
-      write('Codec: ');
-      if newchip = true then
-      write('AD1845 or CS4231')
-      else
-      write('AD1848/1846 or CS4248');
-      str(codecver div 10,s);
-      write(' Revision: '+s+'.');
-      str(codecver mod 10,s);
-      writeln(s);
       writeln('Controller is in WSS mode:');
       writeln('');
       writeln('Port   : '+hexw(cfg.WSSbase)+'h');
@@ -730,16 +741,7 @@ if init then    {Do we have to initalize the soundcard?}
     end
     else
     begin
-      SetWSSMode(cfg);        {Switch to WSS Mode for easier access to the codec's internals}
-      write('Codec: ');
-      if newchip = true then
-      write('AD1845 or CS4231')
-      else
-      write('AD1848/1846 or CS4248');
-      str(codecver div 10,s);
-      write(' Revision: '+s+'.');
-      str(codecver mod 10,s);
-      writeln(s);
+      SetWSSMode(cfg);        {Switch to WSS Mode for full access to the codec}
       writeln('Controller is in Sound Blaster mode.');
       writeln('');
       writeln('Port   : '+hexw(cfg.SBbase)+'h ');
@@ -775,7 +777,6 @@ if init then    {Do we have to initalize the soundcard?}
        PCM_COMPL_16BIT: write('16 Bit Twos-Complement PCM');
       end;
       if mode = true then writeln(', Stereo') else writeln(', Mono');
-      Protect_Shadowregs(true);
       SetSBMode(cfg);  {Switch Back to SB}
       DSP_Reset(cfg.SBBase); {Reset DSP to be ready}
     end;
