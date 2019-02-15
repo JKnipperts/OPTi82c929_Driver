@@ -427,8 +427,8 @@ end;
          mouse_show;
          Playback(false);
          mutedac(leftandright,true);
-    (*     Port[$0A] := $4 + cfg.wssdma;
-         Port[$0C] := 0; {Clear the internal DMA flip-flop}*)
+         Port[$0A] := $4 + cfg.wssdma;
+         Port[$0C] := 0; {Clear the internal DMA flip-flop}
          dacplaying := false;
          Wait_for_Mousebutton;
         end
