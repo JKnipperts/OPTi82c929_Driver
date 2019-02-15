@@ -153,6 +153,8 @@ begin
   end;
 end;
 
+
+
 function SaveSettings : Boolean;
 begin
   assign(f,cfgfile);
@@ -1265,7 +1267,7 @@ until (key =  #27);
  begin
   NoteOff(1,48,127);
   ResetMPU(1);    {Reset UART Mode}
-  ResetMPU(0);    {Reset back to default mode}
+  ResetMPU(0);    {Reset the MPU back to default mode, if more than UART is supported}
  end;
 
 
