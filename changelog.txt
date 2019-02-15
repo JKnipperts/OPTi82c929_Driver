@@ -1,0 +1,15 @@
+
+SETUP
+  v1.0 to 1.01: 
+   - Keyboard mode added: Program is now fully useable without mouse.
+  v1.01 to 1.1:
+   - Just to fixes: 
+   - Bug fix: Program tries no more to load config when standard cfg was set
+   - Bug fix: MPU401 will no longer be tested when MPU is disabled
+  v1.1 to 1.2
+   - Set default values if controller detection failed
+   - Added enhanced OPL4 support
+   - Added more advanced options in a second screen
+   - Renamed some options to fit with the datasheet
+   - Some small bugfixes 
+     (textcursor disappeard on exit, one option was not changeable in keyboard mode..) 
