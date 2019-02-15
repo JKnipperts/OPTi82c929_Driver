@@ -4,18 +4,6 @@
 Version:    1.2
 Date   :    10.02.2019
 Author :    Jan Knipperts
-
-changes
-  v1.0 to 1.01: Keyboard control was added
-  v1.01 to 1.1:
-   - Bug fix: Program tries no more to load config when standard cfg was set
-   - Bug fix: MPU401 will no longer be tested when disabled
-  v1.1 to 1.2
-   - Set default values if controller detection failed
-   - Added OPL4 support
-   - Added second page of advanced options
-   - Renamed some options
-   - Some small bugfixes
 *****************************************************************************}
 
 
