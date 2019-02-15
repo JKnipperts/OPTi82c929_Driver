@@ -1451,11 +1451,11 @@ begin
 
    if length(s) >= length(newblaster) then
    begin
-    for dummy := 1 to length(s) do       {Alten Eintrag lschen}
+    for dummy := 1 to length(s) do       {Delete old entry}
     begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := 0;
     end;
-    for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfgen}
+    for dummy := 1 to length(newblaster) do       {Insert the new string}
     begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
     end;
@@ -1468,7 +1468,7 @@ begin
    else
    begin
      move(ptr(seg(p^),ofs(p^)+bpos+length(s))^,ptr(seg(p^),ofs(p^)+bpos+length(newblaster))^,size-(bpos+length(s)));
-     for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfgen}
+     for dummy := 1 to length(newblaster) do       {Insert new string}
      begin
       mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
      end;
@@ -1496,7 +1496,7 @@ begin
         ptr(seg(p^),ofs(p^)+(bpos+length(newblaster)))^,
         size-bpos);
 
-   for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfgen}
+   for dummy := 1 to length(newblaster) do       {Insert new string}
    begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
    end;
@@ -1527,7 +1527,7 @@ begin
         ptr(seg(p^),ofs(p^)+(cpos+length(initstr)))^,
         size-cpos);
 
-   for dummy := 1 to length(initstr) do       {Neuen Eintrag einfgen}
+   for dummy := 1 to length(initstr) do       {Insert new string}
    begin
      mem[seg(p^):ofs(p^)+cpos+(dummy-1)] := ord(initstr[dummy]);
    end;
@@ -1588,16 +1588,6 @@ begin
        selectitem(mselect);
       end;
     end;
-
-
-   {   if (key = 'D') then
-      begin
-        assign(f,'MAIN.SCR');
-        rewrite(f,1);
-        blockwrite(f,ptr(segB800,0)^,4000);
-        close(f);
-      end;   }
-
 
 
       {Checkboxes}
@@ -2275,15 +2265,6 @@ begin
      end;
 
     end;
-
-{      if (key = 'D') then
-      begin
-        assign(f,'ADV.SCR');
-        rewrite(f,1);
-        blockwrite(f,ptr(segB800,0)^,4000);
-        close(f);
-      end;}
-
 
       {Handle Buttons:}
 
