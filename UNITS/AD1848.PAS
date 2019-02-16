@@ -1,5 +1,6 @@
-{Low level driver for Analog Devices AD1848 Soundport Codec (Windows Sound System)
- V 0.71 (c) 2018 by Jan Knipperts}
+{Low level driver for Analog Devices AD1848 Soundport codec
+ V 0.8 (c) 2018 by Jan Knipperts}
+
 
 
 
@@ -142,10 +143,14 @@ Procedure Capture(startstop : Boolean);
 Procedure SetDigitalMix(Enable : Boolean; Volume : byte);
 
 
+
+
+
+
 implementation
 
 procedure set_bit(var b:byte; bit:integer; value:boolean);
-{Fast routine to toggle a single bit}
+{Schnelle Funktion zum setzen eines einzelnen Bit}
 begin
    if value then
       b:= b or (1 shl bit)
@@ -155,14 +160,14 @@ end;
 
 
 Function get_Bit(b, n : Byte) : boolean;
-{returns the state of a bit}
+{liefert den Zustand eines Bit}
 begin
   get_Bit := boolean(odd(b shr n));
 end;
 
 
 procedure XDelay(ms:word);
-{Replacement fo¬År Borlands Delay routine}
+{Replacement fÅr Borlands Delay routine}
 assembler;
 asm
   mov ax,1000
@@ -175,7 +180,6 @@ end;
 
 
 Procedure WaitforCodec;
-{Waits for the codec to be ready for I/O}
 begin
         timeout := false;
         timeoutcnt := timeoutvalue;
@@ -185,8 +189,7 @@ begin
 end;
 
 
-Procedure WaitACI;              
-{Waits until ACI (Auto callibration) bit turns off}
+Procedure WaitACI;              {Wait until ACI bit turns off}
 begin
         port[CODEC.ADDR] := $B; {I11}
         timeoutcnt := timeoutvalue;
@@ -202,7 +205,6 @@ end;
 
 
 Function Wait_calibration : boolean;
-{Waits until the autocalibration of the codec is completed}
 begin
 
         timeout := false; {We hope for the best}
@@ -259,12 +261,12 @@ end;
 
 
 Procedure WriteCODECReg(reg : byte; data : byte);
-{Writes one byte to the given register of the codec}
+{Writes one byte to the given register}
  var oldreg : byte;
    begin
 
         asm
-         cli    {Disable interrupts}
+         cli
         end;
 
        {Are we initalizing?}
@@ -287,7 +289,7 @@ Procedure WriteCODECReg(reg : byte; data : byte);
         end;
 
         asm
-         sti  {Enable Interrupts}
+         sti
         end;
    end;
 
@@ -301,14 +303,16 @@ Function ReadCODECReg(reg : byte) : byte;
          cli
         end;
 
-        WaitforCodec;   {Are we initalizing?}
+                 {Are we initalizing?}
+
+        WaitforCodec;
         oldreg := port[CODEC.ADDR];
 
         if oldreg <> $80 then  {is the codec responding now?}
         begin
  	 port[CODEC.ADDR] := (oldreg and $F0) or (reg and $0F);
          xdelay(1);
-         retval := port[CODEC.DATA];   {For some reason this has to be done at least twice....}
+         retval := port[CODEC.DATA];
          retval := port[CODEC.DATA];   {Errata for AD1848....}
          retval := port[CODEC.DATA];
          ReadCODECReg := retval;
@@ -330,22 +334,22 @@ function DetectAD1848 : boolean;
 var d1,d2 : byte;
    begin
 
-    if port[CODEC.wssport] = $FF then     {Do we get just Bus float?}
+    if port[CODEC.wssport] = $FF then     {Ist an dem Port Åberhaupt etwas?}
     begin
      DetectAD1848 := false;
     end
     else
     begin
 
-        if port[CODEC.ADDR] = $80 then  {Is the codec not ready for I/O?}
+        if port[CODEC.ADDR] = $80 then  {codec not ready?}
         begin
           Waitforcodec;               {lets wait...}
 
           if port[CODEC.ADDR] = $80 then   {still not ready?}
           begin
-            Waitforcodec;                 {ok, we wait one more time...}
+            Waitforcodec;                 {ok, we wait one last time...}
 
-            if timeoutcnt = 0 then           {timeout? Codec is still not ready. Maybe a problem with codec or no AD1848}
+            if timeoutcnt = 0 then           {problem with codec or no AD1848}
             begin
               DetectAD1848 := false;
               exit;
@@ -355,24 +359,24 @@ var d1,d2 : byte;
 
 
 
-      {The last four bits of this register of the AD1848 contain the codec version and are write protected}
+      {Die letzten 4 bit sind beim AD1848 schreibgeschÅtzt (codec version)}
       d1 := ReadCODECReg($C);
       d2 := d1;
 
-      {let's try to change them...}
+      {...mal sehen...}
       if get_bit(d2,0) then set_bit(d2,0,false) else set_bit(d2,0,true);
       WriteCODECReg($C,d2);
       d2 := 0;
       d2 := ReadCODECReg($C);
 
-      if (d1 <> d2) then {We could change the bits, Chip is no AD1848!}
+      if (d1 <> d2) then {Wir konnten ein bit Ñndern, also kein AD1848}
       begin
        DetectAD1848 := false;
       end
       else
       begin
        DetectAD1848 := true;
-       codecver := d2 and 15; {Let's save the codec version while we are still here}
+       codecver := d2 and 15; {Wir melden die letzten 4 Bit, die Codec-Revision zurÅck}
       end;
 
     end;
@@ -425,7 +429,7 @@ var d1,d2 : byte;
 
 
  Procedure MCE(onoff : boolean);
- {Enables or Disables the "Modechange" mode that is necessary for changing samplerates}
+ {Schaltet "Modechange" an/aus}
   var dummy : byte;
       timer : word;
  begin
@@ -498,6 +502,7 @@ var d1,d2 : byte;
          sti
         end;
         Init_AD1848 := true;
+
   end;
 
 
@@ -506,7 +511,6 @@ var d1,d2 : byte;
 
 
  Procedure Calibrate_AD1848;
- {Performs a full (re-) calibration of the codec}
  var dummy : byte;
      cnt   : word;
  begin
@@ -561,11 +565,10 @@ var d1,d2 : byte;
 
 
 Procedure AD1848_SetOutputFormat(freq : word; format : byte; stereo : boolean);
-{Configures frequency and format of audio output}
 var n,r,fmt,dummy : byte;
     d, dold      : word;
 begin
-   dold := codec_rates[14].freq;                {detects the best fitting frequency}
+   dold := codec_rates[14].freq;                {suche die am besten passende frequenz}
    for n := 14 downto 0 do
    begin
         d := abs(codec_rates[N].freq-freq);
@@ -620,10 +623,11 @@ begin
 
      WriteCODECReg($8,fmt);
 
-     {  According to GUS MAX SDK we have to read from the CODEC
-        data port twice at this point. Don't ask me why...   }
+     {  Now according to GUS MAX SDK source we need to read from the CODEC
+        data port twice. Don't ask me why, but I really hope this solves
+        the problem in setting the sample rate...   }
 
-     readCODECreg($08);  
+     readCODECreg($08);  {...}
      readCODECreg($08);
 
      Waitforcodec;
@@ -637,7 +641,6 @@ begin
 
 
 Procedure AD1848_GetOutputFormat(var freq : word;var format : byte;var sm : boolean);
-{Returns the acutal output frequency and format. sm = true means stereo}
 var divider,n,dummy,xtal : byte;
 begin
    sm := false;
@@ -683,7 +686,6 @@ begin
 
 
   Procedure SetDigitalMix(Enable : Boolean; Volume : byte);
- {If DigitalMix enabeled, all DAC Output will be mixed with ADC input.}
   var dummy : byte;
   begin
      dummy := 0;
@@ -697,7 +699,6 @@ begin
 
 
   Function GetInputDevice : byte;
- {Returns the id of the actual used input device}
    var dummy : byte;
   begin
     dummy := readCODECReg($00);
@@ -725,8 +726,10 @@ begin
    end;
 
 
+
+
+
   Procedure SetInput(Device, Channel, Volume : byte; MicGain : Boolean);
-  {Configures the device for Audioinput. MicGain enables a +20 db gain for microphone input}
   var dummy : byte;
   begin
 
@@ -784,7 +787,6 @@ begin
 
 
  Procedure Playback(startstop : Boolean);
- {Starts Audioplayback}
  var dummy : byte;
  begin
    dummy :=  0;
@@ -795,7 +797,6 @@ begin
  end;
 
  Procedure Capture(startstop : Boolean);
- {Starts Audiocapture. Before calling this Samplerate and format should be set}
  var dummy : byte;
  begin
    dummy :=  0;
@@ -837,7 +838,6 @@ begin
 
 
  Procedure MuteAUX1(Channel : byte; muteit : Boolean);
- {Mutes/Unmutes the given Channel of AUX2 Output}
   var dummy : byte;
   begin
 
@@ -869,9 +869,9 @@ begin
   end;
 
   Procedure MuteAUX2(Channel : byte; muteit : Boolean);
-  {Mutes/Unmutes the given Channel of AUX2 Output}
   var dummy : byte;
   begin
+     dummy := 0;
 
       Case Channel Of
       Left         :
@@ -903,28 +903,21 @@ begin
 
 
 Procedure AD1848_SetVolume(VolumeType, Channel, Volume : Byte);
-{Sets the volume for the given Device and channel (0 to 30)}
 var reg,reg2 : byte;
 begin
   {WSS has only attenuation regs, so we totally mute outputs to get
       silence w/volume 0 }
 
-     if volume > 30 then volume := 30;
-     volume := 31-volume;
+    if volume > 30 then volume := 30;
+    volume := 30-volume;
 
-
-
-   if (volume = 0) then
+   if (volume = 30) then
    begin
-    Case Channel Of
-      Left         : WriteCODECReg(VolumeType,$80);
-      Right        : WriteCODECReg(VolumeType+1,$80);
-      LeftAndRight :
-                   begin
-                     WriteCODECReg(VolumeType,$80); {mute left and set vol to zero}
-                     WriteCODECReg(VolumeType+1,$80); {mute right and set vol to zero}
-                   end;
-    End;
+    Case VolumeType Of
+      DAC          : MuteDAC(Channel,true);
+      AUX1         : MuteAUX1(Channel,true);
+      AUX2         : MuteAUX2(Channel,true);
+    end;
    end
    else
    begin
@@ -951,7 +944,6 @@ end;
 
 
 Function AD1848_GetVolume(VolumeType, Channel : byte) : byte;
-{Returns the actual volume for the given device and channel}
 var  Volume,vl,vr : Byte;
 begin
    vl := ReadCODECReg(VolumeType);
@@ -964,12 +956,12 @@ begin
       Right        : volume := vr;
       LeftAndRight : volume := (vr+vl) div 2;
    end;
-  AD1848_GetVolume := 31-volume;
+
+  AD1848_GetVolume := 30-volume;
 end;
 
 
 Function AD1848_GetGain(Channel : byte) : byte;
-{Returns the actual input gain for the given channel (0 to 15)}
 var  Volume,vl,vr : Byte;
 begin
    vl := ReadCODECReg($00);
