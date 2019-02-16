@@ -1,12 +1,17 @@
+929INIT
+1.1
+- Bugfix: Shadowregister protection must be enabled when initializing the Sound Blaster Pro mode.
+  This brings much better game compatibility.
+- Bugfix: There was a bug in the code to set Mono/Stereo
+- Revised the "Info" section.  Now the actual current frequency is read out and displayed.
+
+1.2
+- Added enhances OPL4 support
+
 
 MIXER
- 1.0
- - Added AUX1 as possible input 
- - Made some adjustments in the programs appearance, window and text alignments and so on
- - Some smaller adjustments and improvements of the code
-
  1.1
- - Keyboard mode added: Program is now fully useable without mouse.
+ - Keyboard mode added: Program is now fully useable without a mouse.
  - Added parameters "K" and "?"
  - Bugfix: There was a bug in the code to set Mono/Stereo modes
 
@@ -15,11 +20,12 @@ MIXER
  - Now values from 0 to 30 will be set correctly
 
 
+
 SETUP
-  v1.0 to 1.01: 
-   - Keyboard mode added: Program is now fully useable without mouse.
+  1.01: 
+   - Keyboard mode added: Program is now fully useable without a mouse.
    
-  v1.01 to 1.1:
+  1.1:
    - Just fixed two stupid errors.... 
    - Bug fix: If the configuration file was not found and therefore the default 
               settings are used, due to a bug the program tried to read the  
@@ -27,7 +33,7 @@ SETUP
    - Bug fix: 
               MPU401 will no longer be tested when MPU is disabled.....
               
-  v1.1 to 1.2
+  1.2
    - Added doubble check for controller detection
    - Added enhanced OPL4 support
    - Added more advanced options in a second screen
