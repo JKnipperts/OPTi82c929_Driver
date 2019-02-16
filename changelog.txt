@@ -8,9 +8,11 @@ MIXER
  1.1
  - Keyboard mode added: Program is now fully useable without mouse.
  - Added parameters "K" and "?"
- - Bugfix: There was a bug in the code to set Mono/Stereo modes}
+ - Bugfix: There was a bug in the code to set Mono/Stereo modes
 
-
+1.11 
+ - Bugfix in AD1848.PAS: Setvolume did not function properly with volume 0
+ - Now values from 0 to 30 will be set correctly
 
 
 SETUP
