@@ -1,9 +1,41 @@
 {*****************************************************************************
    Mixer for my Low Level Driver for OPTi 82C929 Soundcards
 *****************************************************************************
-Version:    1.1
+Version:    1.11
+Date   :    01.02.2019
 Author :    Jan Knipperts
 *****************************************************************************}
+{Changelist 0.8 - 0.9:
+ Kleiner Bugfix - OPL Volume kann nun auf 100% gestezt werden
+ Mauszeiger verschwindet nicht mehr, wenn Button angeklickt wird
+ Nur eigene Textfunktionen, Unit CRT wird nicht mehr verwendet
+ Bezeichnungen etwas angepasst
+ Eingangspegel fr Input w„hlbar
+
+ 0.9 - 0.9b
+ Nutzt SB Pro unit
+
+ 0.9 - 0.9c
+ - Komplette umgestaltung. Nutzt jetzt nur WSS und
+   SB Volume wird erst am Ende gesetzt.
+ - PostMix und Digital Mixing hinzugefgt
+ - Nutzt jetzt eigene BMF-Unit fr FM-Sound
+ - Kleiner Bugfix beim MPU-Soundcheck
+ - Einige grafische Verbesserungen
+ - Mousesteuerung optimiert
+
+ 1.0
+ - AUX1 als Input hinzugefgt
+ - Darstellung angepasst
+ - Kleine grafische Verbesserungen und bugfixes
+
+ 1.1
+ - Tastatursteuerung
+ - Parameter K und ?
+ - Bugfix zum Setzen von Mono/Stereo
+
+ 1.11
+ - Bug in Set_volume verhinderte mute bei Lautst„rke 0}
 
 
 Program AD1848_Mixer;
@@ -49,7 +81,7 @@ type
 
 
 const
-     title          : string = 'MAD16 Pro Mixer v.1.1 (c) 2019 Jan Knipperts';
+     title          : string = 'MAD16 Pro Mixer v.1.11 (c) 2019 Jan Knipperts';
      footer         : string = 'F1 = Load last settings, ESC = Save and quit';
      kfooter        : string = 'Up/Down = Select; +/- = Set Volume; Space/Enter = Toggle; F,S,W = Soundcheck';
      cfgfile        : string = 'sound.cfg';
@@ -153,8 +185,6 @@ begin
   end;
 end;
 
-
-
 function SaveSettings : Boolean;
 begin
   assign(f,cfgfile);
@@ -192,17 +222,17 @@ end;
 
 Procedure Refresh_volumes;
 begin
- fastwrite(51,7,headings,background,addspace(round((volumes.dacl / 31)*100)));
+ fastwrite(51,7,headings,background,addspace(round((volumes.dacl / 30)*100)));
  fastwrite(54,7,headings,background,'%');
- fastwrite(51,8,headings,background,addspace(round((volumes.dacr / 31)*100)));
+ fastwrite(51,8,headings,background,addspace(round((volumes.dacr / 30)*100)));
  fastwrite(54,8,headings,background,'%');
- fastwrite(51,13,headings,background,addspace(round((volumes.aux1l / 31)*100)));
+ fastwrite(51,13,headings,background,addspace(round((volumes.aux1l / 30)*100)));
  fastwrite(54,13,headings,background,'%');
- fastwrite(51,14,headings,background,addspace(round((volumes.aux1r / 31)*100)));
+ fastwrite(51,14,headings,background,addspace(round((volumes.aux1r / 30)*100)));
  fastwrite(54,14,headings,background,'%');
- fastwrite(51,19,headings,background,addspace(round((volumes.aux2l / 31)*100)));
+ fastwrite(51,19,headings,background,addspace(round((volumes.aux2l / 30)*100)));
  fastwrite(54,19,headings,background,'%');
- fastwrite(51,20,headings,background,addspace(round((volumes.aux2r / 31)*100)));
+ fastwrite(51,20,headings,background,addspace(round((volumes.aux2r / 30)*100)));
  fastwrite(54,20,headings,background,'%');
 end;
 
@@ -210,12 +240,12 @@ end;
 
 Procedure Reset_Sliders;
 begin
- putchar(dacl.x,7,'Ã„',textcol,background);
- putchar(dacr.x,8,'Ã„',textcol,background);
- putchar(aux1l.x,13,'Ã„',textcol,background);
- putchar(aux1r.x,14,'Ã„',textcol,background);
- putchar(aux2l.x,19,'Ã„',textcol,background);
- putchar(aux2r.x,20,'Ã„',textcol,background);
+ putchar(dacl.x,7,'Ä',textcol,background);
+ putchar(dacr.x,8,'Ä',textcol,background);
+ putchar(aux1l.x,13,'Ä',textcol,background);
+ putchar(aux1r.x,14,'Ä',textcol,background);
+ putchar(aux2l.x,19,'Ä',textcol,background);
+ putchar(aux2r.x,20,'Ä',textcol,background);
 
  dacl.x  := volumes.dacl+18;
  dacr.x  := volumes.dacr+18;
@@ -224,12 +254,12 @@ begin
  aux2l.x := volumes.aux2l+18;
  aux2r.x := volumes.aux2r+18;
 
- putchar(dacl.x,7,'Ã›',textcol,background);
- putchar(dacr.x,8,'Ã›',textcol,background);
- putchar(aux1l.x,13,'Ã›',textcol,background);
- putchar(aux1r.x,14,'Ã›',textcol,background);
- putchar(aux2l.x,19,'Ã›',textcol,background);
- putchar(aux2r.x,20,'Ã›',textcol,background);
+ putchar(dacl.x,7,'Û',textcol,background);
+ putchar(dacr.x,8,'Û',textcol,background);
+ putchar(aux1l.x,13,'Û',textcol,background);
+ putchar(aux1r.x,14,'Û',textcol,background);
+ putchar(aux2l.x,19,'Û',textcol,background);
+ putchar(aux2r.x,20,'Û',textcol,background);
  fastwrite(69,22,15,0,addspace(round((volumes.gain / 15)*100))+'%');
 
 
@@ -396,8 +426,8 @@ end;
      begin
        fastwrite(66,5,0,7,'FM Music');
        if keyboardmode then putchar(66,5,'F',4,7);
-       fastwrite(67,6,0,background, 'ÃŸÃŸÃŸÃŸÃŸÃŸÃŸÃŸ');
-       fastwrite(74,5,0,background, 'Ãœ');
+       fastwrite(67,6,0,background, 'ßßßßßßßß');
+       fastwrite(74,5,0,background, 'Ü');
        if not keyboardmode then mouse_show;
        ClearOPL;
        StopBMFPlayer;
@@ -407,8 +437,8 @@ end;
      else
       begin
         fastwrite(66,5,0,7,'FM Music');
-        fastwrite(67,6,background,background, 'ÃŸÃŸÃŸÃŸÃŸÃŸÃŸÃŸ');
-        fastwrite(74,5,background,background, 'Ãœ');
+        fastwrite(67,6,background,background, 'ßßßßßßßß');
+        fastwrite(74,5,background,background, 'Ü');
         mouse_show;
         PlayBMFdata(@intro8,3797);
         fmplaying := true;
@@ -422,21 +452,21 @@ end;
         begin
          fastwrite(66,7,0,7,'Sample');
          if keyboardmode then putchar(66,7,'S',4,7);
-         fastwrite(67,8,0,background, 'ÃŸÃŸÃŸÃŸÃŸÃŸ');
-         fastwrite(72,7,0,background, 'Ãœ');
+         fastwrite(67,8,0,background, 'ßßßßßß');
+         fastwrite(72,7,0,background, 'Ü');
          mouse_show;
          Playback(false);
          mutedac(leftandright,true);
-         Port[$0A] := $4 + cfg.wssdma;
-         Port[$0C] := 0; {Clear the internal DMA flip-flop}
+    (*     Port[$0A] := $4 + cfg.wssdma;
+         Port[$0C] := 0; {Clear the internal DMA flip-flop}*)
          dacplaying := false;
          Wait_for_Mousebutton;
         end
         else
         begin
          fastwrite(66,7,0,7,'Sample');
-         fastwrite(67,8,background,background, 'ÃŸÃŸÃŸÃŸÃŸÃŸ');
-         fastwrite(72,7,background,background, 'Ãœ');
+         fastwrite(67,8,background,background, 'ßßßßßß');
+         fastwrite(72,7,background,background, 'Ü');
          mouse_show;
 
          mutedac(leftandright,true);
@@ -450,8 +480,8 @@ end;
      Procedure PlayMidi;
      begin
         fastwrite(66,9,0,7,'Wavetable');
-        fastwrite(67,10,background,background, 'ÃŸÃŸÃŸÃŸÃŸÃŸÃŸÃŸÃŸ');
-        fastwrite(75,9,background,background, 'Ãœ');
+        fastwrite(67,10,background,background, 'ßßßßßßßßß');
+        fastwrite(75,9,background,background, 'Ü');
         mouse_show;
         NoteOff(1,48,127);
         SetPatch(1,1);
@@ -460,8 +490,8 @@ end;
         mouse_hide;
         fastwrite(66,9,0,7,'Wavetable');
         if keyboardmode then putchar(66,9,'W',4,7);
-        fastwrite(67,10,0,background, 'ÃŸÃŸÃŸÃŸÃŸÃŸÃŸÃŸÃŸ');
-        fastwrite(75,9,0,background, 'Ãœ');
+        fastwrite(67,10,0,background, 'ßßßßßßßßß');
+        fastwrite(75,9,0,background, 'Ü');
         mouse_show;
       end;
 
@@ -810,14 +840,14 @@ end;
  window(4,3,57,23,textcol,background,true);
  fastwrite(23,3,headings,background,'Actual volumes:');
  fastwrite(8, 5,headings,background,'DAC Output');
- fastwrite(10, 7,textcol,background,'Left:   Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„');
- fastwrite(10, 8,textcol,background,'Right:  Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„');
+ fastwrite(10, 7,textcol,background,'Left:   ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ');
+ fastwrite(10, 8,textcol,background,'Right:  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ');
  fastwrite(8,11,headings,background,'Auxiliary 1 (CD and ext. Midi)  ');
- fastwrite(10,13,textcol,background,'Left:   Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„');
- fastwrite(10,14,textcol,background,'Right:  Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„');
+ fastwrite(10,13,textcol,background,'Left:   ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ');
+ fastwrite(10,14,textcol,background,'Right:  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ');
  fastwrite(8,17,headings,background,'Auxiliary 2 (FM and Wavetableheader) ');
- fastwrite(10,19,textcol,background,'Left:   Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„');
- fastwrite(10,20,textcol,background,'Right:  Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„Ã„');
+ fastwrite(10,19,textcol,background,'Left:   ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ');
+ fastwrite(10,20,textcol,background,'Right:  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ');
 
 
  volumes.dacl  := AD1848_GetVolume(DAC,Left);
@@ -835,12 +865,12 @@ end;
  aux2l.x := volumes.aux2l+18;
  aux2r.x := volumes.aux2r+18;
 
- putchar(dacl.x,7,'Ã›',textcol,background);
- putchar(dacr.x,8,'Ã›',textcol,background);
- putchar(aux1l.x,13,'Ã›',textcol,background);
- putchar(aux1r.x,14,'Ã›',textcol,background);
- putchar(aux2l.x,19,'Ã›',textcol,background);
- putchar(aux2r.x,20,'Ã›',textcol,background);
+ putchar(dacl.x,7,'Û',textcol,background);
+ putchar(dacr.x,8,'Û',textcol,background);
+ putchar(aux1l.x,13,'Û',textcol,background);
+ putchar(aux1r.x,14,'Û',textcol,background);
+ putchar(aux2l.x,19,'Û',textcol,background);
+ putchar(aux2r.x,20,'Û',textcol,background);
 
 
 
@@ -886,13 +916,13 @@ end;
 
  fastwrite(66,5,0,7,'FM Musik');
  if keyboardmode then putchar(66,5,'F',4,7);
- fastwrite(67,6,0,background, 'ÃŸÃŸÃŸÃŸÃŸÃŸÃŸÃŸ');
- fastwrite(74,5,0,background, 'Ãœ');
+ fastwrite(67,6,0,background, 'ßßßßßßßß');
+ fastwrite(74,5,0,background, 'Ü');
 
  fastwrite(66,7,0,7,'Sample');
  if keyboardmode then putchar(66,7,'S',4,7);
- fastwrite(67,8,0,background, 'ÃŸÃŸÃŸÃŸÃŸÃŸ');
- fastwrite(72,7,0,background, 'Ãœ');
+ fastwrite(67,8,0,background, 'ßßßßßß');
+ fastwrite(72,7,0,background, 'Ü');
 
  if cfg.mpu401 = 0 then
  begin
@@ -902,8 +932,8 @@ end;
  begin
   fastwrite(66,9,0,7,'Wavetable');
   if keyboardmode then putchar(66,9,'W',4,7);
-  fastwrite(67,10,0,background, 'ÃŸÃŸÃŸÃŸÃŸÃŸÃŸÃŸÃŸ');
-  fastwrite(75,9,0,background, 'Ãœ');
+  fastwrite(67,10,0,background, 'ßßßßßßßßß');
+  fastwrite(75,9,0,background, 'Ü');
  end;
 
  fmplaying := false;
@@ -942,8 +972,8 @@ repeat;
     mouse_hide;
     fastwrite(66,7,0,7,'Sample');
     if keyboardmode then putchar(66,7,'S',4,7);
-    fastwrite(67,8,0,background, 'ÃŸÃŸÃŸÃŸÃŸÃŸ');
-    fastwrite(72,7,0,background, 'Ãœ');
+    fastwrite(67,8,0,background, 'ßßßßßß');
+    fastwrite(72,7,0,background, 'Ü');
     mouse_show;
     dacplaying := false;
  end;
@@ -974,60 +1004,63 @@ begin
    end;
 
 
-    if (xp >= 18) and (xp <= 49) then
+    if (xp >= 18) and (xp <= 48) then
     begin
       case yp of
 
        7:
        begin
-        putchar(dacl.x,7,'Ã„',textcol,background);
+        putchar(dacl.x,7,'Ä',textcol,background);
         dacl.x := xp;
-        putchar(dacl.x,7,'Ã›',textcol,background);
+        putchar(dacl.x,7,'Û',textcol,background);
         volumes.dacl := xp - 18;
         AD1848_SetVolume(DAC,Left,volumes.dacl);
        end;
 
        8:
        begin
-        putchar(dacr.x,8,'Ã„',textcol,background);
+        putchar(dacr.x,8,'Ä',textcol,background);
         dacr.x := xp;
-        putchar(dacr.x,8,'Ã›',textcol,background);
+        putchar(dacr.x,8,'Û',textcol,background);
         volumes.dacr := xp - 18;
         AD1848_SetVolume(DAC,Right,volumes.dacr);
        end;
 
       13:
        begin
-        putchar(aux1l.x,13,'Ã„',textcol,background);
+        putchar(aux1l.x,13,'Ä',textcol,background);
         aux1l.x := xp;
-        putchar(aux1l.x,13,'Ã›',textcol,background);
+        putchar(aux1l.x,13,'Û',textcol,background);
         volumes.aux1l := xp - 18;
         AD1848_SetVolume(AUX1,Left,volumes.aux1l);
        end;
 
       14:
        begin
-        putchar(aux1r.x,14,'Ã„',textcol,background);
+        putchar(aux1r.x,14,'Ä',textcol,background);
         aux1r.x := xp;
-        putchar(aux1r.x,14,'Ã›',textcol,background);
+        putchar(aux1r.x,14,'Û',textcol,background);
         volumes.aux1r := xp - 18;
         AD1848_SetVolume(AUX1,Right,volumes.aux1r);
        end;
 
       19:
        begin
-        putchar(aux2l.x,19,'Ã„',textcol,background);
+        putchar(aux2l.x,19,'Ä',textcol,background);
         aux2l.x := xp;
-        putchar(aux2l.x,19,'Ã›',textcol,background);
+        putchar(aux2l.x,19,'Û',textcol,background);
         volumes.aux2l := xp - 18;
         AD1848_SetVolume(AUX2,Left,volumes.aux2l);
-        end;
+        gotoxy(1,1);
+        write(addzero(volumes.aux2l)+' '+addzero(ad1848_getvolume(aux2,left)));
+
+       end;
 
       20:
        begin
-        putchar(aux2r.x,20,'Ã„',textcol,background);
+        putchar(aux2r.x,20,'Ä',textcol,background);
         aux2r.x := xp;
-        putchar(aux2r.x,20,'Ã›',textcol,background);
+        putchar(aux2r.x,20,'Û',textcol,background);
         volumes.aux2r := xp - 18;
         AD1848_SetVolume(AUX2,Right,volumes.aux2r);
        end;
@@ -1119,27 +1152,27 @@ begin
  begin
   case select of
    1: begin
-        if volumes.dacl < 31 then inc(volumes.dacl);
+        if volumes.dacl < 30 then inc(volumes.dacl);
         AD1848_SetVolume(DAC,Left,volumes.dacl);
        end;
    2: begin
-        if volumes.dacr < 31 then inc(volumes.dacr);
+        if volumes.dacr < 30 then inc(volumes.dacr);
         AD1848_SetVolume(DAC,Right,volumes.dacr);
        end;
    3: begin
-        if volumes.aux1l < 31 then inc(volumes.aux1l);
+        if volumes.aux1l < 30 then inc(volumes.aux1l);
         AD1848_SetVolume(AUX1,LEFT,volumes.aux1l);
        end;
    4: begin
-        if volumes.aux1r < 31 then inc(volumes.aux1r);
+        if volumes.aux1r < 30 then inc(volumes.aux1r);
         AD1848_SetVolume(AUX1,Right,volumes.aux1r);
        end;
    5: begin
-        if volumes.aux2l < 31 then inc(volumes.aux2l);
+        if volumes.aux2l < 30 then inc(volumes.aux2l);
         AD1848_SetVolume(AUX2,LEFT,volumes.aux2l);
        end;
    6: begin
-        if volumes.aux2r < 31 then inc(volumes.aux2r);
+        if volumes.aux2r < 30 then inc(volumes.aux2r);
         AD1848_SetVolume(AUX2,Right,volumes.aux2r);
        end;
    13: begin
@@ -1267,7 +1300,7 @@ until (key =  #27);
  begin
   NoteOff(1,48,127);
   ResetMPU(1);    {Reset UART Mode}
-  ResetMPU(0);    {Reset the MPU back to default mode, if more than UART is supported}
+  ResetMPU(0);    {Reset back to default mode}
  end;
 
 
