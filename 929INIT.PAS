@@ -1,6 +1,6 @@
 {
 ******************************************************************************
-Low Level Initialization for Sound Cards with OPTi 82C929 and AD1848K Chipsets
+Low Level initialization of Sound Cards with OPTi 82C929 Controller
 ******************************************************************************
 Version:    1.2
 Author :    Jan Knipperts
@@ -79,30 +79,30 @@ begin
   textcolor(7);
   textbackground(0);
   writeln('');
-  write('Ú');
+  write('Ãš');
   for xc := 2 to 79 do
   begin
     gotoxy(xc,gety);
-    write('Ä');
+    write('Ã„');
   end;
-  write('¿');
-  write('³');
+  write('Â¿');
+  write('Â³');
   gotoxy(40-(length(title) div 2),gety);
   write(title);
   gotoxy(80,gety);
-  write('³');
-  write('³');
+  write('Â³');
+  write('Â³');
   gotoxy(40-(length(copyright) div 2),gety);
   write(copyright);
   gotoxy(80,gety);
-  write('³');
-  write('À');
+  write('Â³');
+  write('Ã€');
   for xc := 2 to 79 do
   begin
     gotoxy(xc,gety);
-    write('Ä');
+    write('Ã„');
   end;
-  write('Ù');
+  write('Ã™');
 end;
 
 
@@ -277,7 +277,7 @@ begin
   if (cfg.WSSBase <> $530) and
      (cfg.WSSBase <> $E80) and
      (cfg.WSSBase <> $F40) and
-     (cfg.WSSBase <> $604) then                {Wrong WS-Port in config file}
+     (cfg.WSSBase <> $604) then                {Unsupported settings for WSS-Port in config file?!?}
   begin
    writeln('');
    writeln(error[4]);
@@ -289,7 +289,7 @@ begin
      (cfg.WSSIRQ <> 9) and
      (cfg.WSSIRQ <> 10) and
      (cfg.WSSIRQ <> 11) and
-     (cfg.WSSIRQ <> $FF) then                  {Wrong WSS-IRQ in config file}
+     (cfg.WSSIRQ <> $FF) then                  {Unsupported WSS-IRQ in config file...}
   begin
    writeln('');
    writeln(error[5]);
@@ -317,12 +317,12 @@ begin
 
 if not quiet then write('Detecting AD1848 compatible CODEC on port '+hexw(CODEC.WSSPort)+'h - ');
 
-sb := SBmode;
+sb := SBmode; {Save the state of the controller}
 
-SetWSSMode(cfg);   {set controller in WSS Mode}
+SetWSSMode(cfg);   {set controller to WSS mode}
 Protect_Shadowregs(false); {Enable full access to the codec}
 
-CODEC.WSSPort := cfg.WSSBase;
+CODEC.WSSPort := cfg.WSSBase;      {Set up some variables to interatc with the codec}
 CODEC.ADDR    := cfg.WSSBase+4;
 CODEC.DATA    := cfg.WSSBase+5;
 CODEC.STATUS  := cfg.WSSBase+6;
@@ -340,7 +340,6 @@ begin
  if SB then
  begin
   SetSBMode(cfg);   {set controller back to SB Mode}
- { Protect_Shadowregs(true); {Disbale full access to the codec}
  end;
  halt(1);
 end;
@@ -348,7 +347,6 @@ end;
  if SB then
  begin
   SetSBMode(cfg);   {set controller back to SB Mode}
-{  Protect_Shadowregs(true); {Disbale full access to the codec}
  end;
 
 end;
@@ -357,8 +355,6 @@ Procedure DetectController;
 begin
 
 if not quiet then write('Detecting OPTi 82C929A Soundcontroller - ');
-
-if not detect929 then setinitvalues; {if it failes, try to set defaults}
 
 if detect929 then
 begin
@@ -398,7 +394,7 @@ if not quiet then write('Initialize the Codec - ');
 
 Waitforcodec;   {Wait for codec to be ready...}
 
-if not Init_AD1848 then   {Codec initialization failed!}
+if not Init_AD1848 then   {Codec initialisation failed!}
 begin
   writeln('');
   writeln(error[1]);
@@ -429,10 +425,10 @@ end;
 
 if cfg.opl = 4 then  {Do we assume an OPL4?}
 begin
-  if not OPL4_detect then   {but we don't find one...}
+  if not OPL4_detect then   {The config says OPL4 but we don't find one...}
   begin
    cfg.opl := 3;     {Set OPL3 instead}
-   SetWSSMode(cfg);   {Reset controller}
+   SetWSSMode(cfg);   {Reset controller to new configuration}
   end
   else
   begin
@@ -440,14 +436,11 @@ begin
   end;
 end;
 
-if DetectOPL3 then    {if OPL3 is present..}
+if DetectOPL3 then    {Check if OPL3 is present..}
 begin
-  InitOPL;            {Initialize it..}
-  ClearOPL;           {and mute all channels, clear registers}
+  InitOPL;            {Found it. So we can initialize it..}
+  ClearOPL;           {Mute all channels and clear registers}
 end;
-
-
-
 
 if cfg.initmode = 0 then
 begin
@@ -465,7 +458,8 @@ end;
 {========================== Finding files =================}
 Procedure GetPath;
 begin
-  {Looks up its own directory to find the config file}
+  {Looks up its own directory to access the configuration file.  
+   This way we don't have to set an environment variable like the original driver}
   cfgfile := paramstr(0);
   while (cfgfile[Length(cfgfile)] <> '\') and (Length(cfgfile) <> 0) do
     Delete(cfgfile,Length(cfgfile),1);
@@ -476,7 +470,7 @@ end;
 
 {================= Handle command line options ========================}
 
-Function FindOption(lookup : string) : boolean;
+Function FindOption(lookup : string) : boolean;  {Searches for a string in all parameters}
 var cnt : byte;
     s   : string;
 begin
@@ -486,7 +480,7 @@ begin
   if length(paramstr(cnt)) > length(lookup) then
   s := copy(uppercase(paramstr(cnt)),1,length(lookup))
   else
-  s := uppercase(paramstr(cnt));
+  s := uppercase(paramstr(cnt)); {Make all chars uppercase}
 
   if s = uppercase(lookup) then
   begin
@@ -582,9 +576,9 @@ begin
      if not quiet then write('Configure controller for WSS mode - ');
       SetWSSMode(cfg);           {Set OPTi 929 to WSS Mode}
       Protect_Shadowregs(false); {Enable full access to the codec}
-      Prepare_AD1848_for_WSS;          {Set AD1848 up for WSS}
+      Prepare_AD1848_for_WSS;    {Set up AD1848 for use as WSS}
 
-      if detectWSS then          {Perform WSS detection}
+      if detectWSS then          {And try to detect a valid WSS System}
       begin
         if not quiet then      writeln('OK');
       end
@@ -596,15 +590,15 @@ begin
         halt(1);
       end;
 
-     if cfg.mpu401 = 1 then         {Set up MPU401 when it's enabled}
+     if cfg.mpu401 = 1 then         {Set up MPU401 if it's enabled}
      begin
        DATAPORT := cfg.mpubase;
        COMDPORT := cfg.mpubase+1;
        STATPORT := cfg.mpubase+1;
 
-       ResetMPU(0);    {First reset MPU to default mode }
-       xdelay(50);     {Wait a bit}
-       if not ResetMPU(1) then   {Try to reset MPU to UART}
+       ResetMPU(0);    {First reset MPU to default mode (if only UART is supported this will already be UART)}
+       xdelay(50);     {Wait a little bit}
+       if not ResetMPU(1) then   {Then try to reset ist to UART}
        begin
          writeln('');
          writeln(error[6]);
@@ -624,22 +618,22 @@ begin
      if stereo then sbfreq.chan := 1;
      if mono then sbfreq.chan := 0;
      if not quiet then
-       write('Configure controller for Sound Blaster mode - ');
-     SetWSSMode(cfg);
-     SetupWSSPort(cfg);
-     Prepare_AD1848_for_SB;
-     Protect_Shadowregs(true);
+     write('Configure controller for Sound Blaster mode - ');
+     SetWSSMode(cfg);  {First reset WSS configuration, this solves some issues....}
+     SetupWSSPort(cfg); {Make sure there is a valid WSS-Port. }
+     {Don't ask me why resettung WSS first is necessary but some games detect the Sound Blaster much easier, if we do this first...} 
+     
+     Prepare_AD1848_for_SB; {Set up AD1848 for use as a Sound Blaster}
+     Protect_Shadowregs(true); {Write protect the shadowed registers}
      SetSBMode(cfg); {Set OPTi Controller to SB Mode}
-
-
-         {check for success}
-
-     if (DSP_Reset(cfg.SBbase) = true) and (hi(SB_GetDSPVersion) = cfg.SBver) then
+ 
+     {Now should be able to handle the SOundcard like a Sound Blaster Pro}
+     if (DSP_Reset(cfg.SBbase) = true) and (hi(SB_GetDSPVersion) = cfg.SBver) then {OK! We can reset the DSP and get the valid DSP version}
      begin
       if not quiet then writeln('OK');
      end
      else
-     begin
+     begin                    {Something went wrong....}
       writeln('');
       writeln(error[7]);
       writeln('');
@@ -647,14 +641,14 @@ begin
      end;
 
 
-     {Cleanup: Reset DSP and set output}
-     DSP_Reset(cfg.SBBase);
-     SB_Speaker(false);
-     SB_ResetMixer;
+     
+     DSP_Reset(cfg.SBBase); {Reset DSP again}
+     SB_Speaker(false); {Mute outputs}
+     SB_ResetMixer; {Reset Mixerchip}
 
-     SB_Setvolume(DAC,left,round((volumes.dacl / 4.28)));  {Set volumes in again in SB Mixer}
+     SB_Setvolume(DAC,left,round((volumes.dacl / 4.28)));  {Now we set the codecs volumes again in SB Mixer}
      SB_Setvolume(DAC,right,round((volumes.dacr / 4.28))); {Just to be save...}
-     SB_Setvolume(CD,left,round((volumes.aux1l / 4.28)));
+     SB_Setvolume(CD,left,round((volumes.aux1l / 4.28)));   {Volumes must be divided by 4.28 to mach SB mixer}
      SB_Setvolume(CD,right,round((volumes.aux1r / 4.28)));
      SB_Setvolume(FM,left,round((volumes.aux2l / 4.28)));
      SB_Setvolume(FM,right,round((volumes.aux2r / 4.28)));
@@ -663,18 +657,19 @@ begin
       0: SB_SetOutput(false,true);  {Set Mono output}
       1: SB_SetOutput(true,true);   {Set Stereo output}
      end;
-     If cfg.sbmix = 0 then SBMixer(false);
+     
+     If cfg.sbmix = 0 then SBMixer(false); {Disable the SB Mixer support, if it is configured like that}
 
-     if cfg.mpu401 = 1 then         {Set up MPU401 when it's enabled}
+     if cfg.mpu401 = 1 then         {Set up MPU401 if it's enabled}
      begin
        DATAPORT := cfg.mpubase;
        COMDPORT := cfg.mpubase+1;
        STATPORT := cfg.mpubase+1;
 
-       ResetMPU(0);    {First reset MPU to default mode }
-       xdelay(50);     {Wait a bit}
+       ResetMPU(0);    {First reset MPU to default mode (if only UART is supported, this will already be UART)}
+       xdelay(50);     {Wait a little bit}
 
-       if not ResetMPU(1) then   {Try to reset MPU to UART}
+       if not ResetMPU(1) then   {Now try to set MPU to UART}
        begin
          writeln('');
          writeln(error[6]);
@@ -684,8 +679,7 @@ begin
 
      end;
 
-
-     DSP_Reset(cfg.SBBase);
+     DSP_Reset(cfg.SBBase); {And again a DSP reset, jutst to bring it to a known save state for other applications}
      if quiet then
      writeln('Sound card successfully initialized (Sound Blaster mode).');
 
