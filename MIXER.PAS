@@ -1018,9 +1018,6 @@ begin
         putchar(aux2l.x,19,'Û',textcol,background);
         volumes.aux2l := xp - 18;
         AD1848_SetVolume(AUX2,Left,volumes.aux2l);
-        gotoxy(1,1);
-        write(addzero(volumes.aux2l)+' '+addzero(ad1848_getvolume(aux2,left)));
-
        end;
 
       20:
