@@ -5,42 +5,7 @@ Version:    1.12
 Date   :    24.02.2019
 Author :    Jan Knipperts
 *****************************************************************************}
-{Changelist 0.8 - 0.9:
- Kleiner Bugfix - OPL Volume kann nun auf 100% gestezt werden
- Mauszeiger verschwindet nicht mehr, wenn Button angeklickt wird
- Nur eigene Textfunktionen, Unit CRT wird nicht mehr verwendet
- Bezeichnungen etwas angepasst
- Eingangspegel fÅr Input wÑhlbar
 
- 0.9 - 0.9b
- Nutzt SB Pro unit
-
- 0.9 - 0.9c
- - Komplette umgestaltung. Nutzt jetzt nur WSS und
-   SB Volume wird erst am Ende gesetzt.
- - PostMix und Digital Mixing hinzugefÅgt
- - Nutzt jetzt eigene BMF-Unit fÅr FM-Sound
- - Kleiner Bugfix beim MPU-Soundcheck
- - Einige grafische Verbesserungen
- - Mousesteuerung optimiert
-
- 1.0
- - AUX1 als Input hinzugefÅgt
- - Darstellung angepasst
- - Kleine grafische Verbesserungen und bugfixes
-
- 1.1
- - Tastatursteuerung
- - Parameter K und ?
- - Bugfix zum Setzen von Mono/Stereo
-
- 1.11
- - Bug in Set_volume verhinderte mute bei LautstÑrke 0
-
- 1.12
- - Verbesserte Verarbeitung der Kommandozeile
- - Mîglichkeit HardwareprÅfung zu Åberspringen
- - Kleine Verbesserungen im Code}
 
 
 Program AD1848_Mixer;
@@ -49,9 +14,9 @@ uses opti929,mpu,oplfm,opl4,
      textmode,misc;
 
 {$L SONG.OBJ}
-Procedure INTRO8; external;   {includes the FM song}
+Procedure INTRO8; external;   {include the FM song}
 {$L TEST8.OBJ}
-Procedure SOUND8BIT; external;   {includes the sample}
+Procedure SOUND8BIT; external;   {include the sample}
 
 type
   slider = record
@@ -397,12 +362,6 @@ begin
    SetSBMode(cfg); {Set OPTi Controller to SB Mode}
    DSP_Reset(sb.base);   {Reset sound blaster dsp}
    SB_ResetMixer;
-  (* SB_Setvolume(DAC,left,round((volumes.dacl / 2)));  {Set volumes in again in SB Mixer}
-   SB_Setvolume(DAC,right,round((volumes.dacr / 2))); {Just to be save...}
-   SB_Setvolume(CD,left,round((volumes.aux1l / 2)));
-   SB_Setvolume(CD,right,round((volumes.aux1r / 2)));
-   SB_Setvolume(FM,left,round((volumes.aux2l / 2)));
-   SB_Setvolume(FM,right,round((volumes.aux2r / 2)));*)
 
    case sbfreq.chan of
       0: SB_SetOutput(false,boolean(filter));  {Set Mono output}
@@ -436,8 +395,8 @@ end;
      begin
        fastwrite(66,5,0,7,'FM Music');
        if keyboardmode then putchar(66,5,'F',4,7);
-       fastwrite(67,6,0,background, 'ﬂﬂﬂﬂﬂﬂﬂﬂ');
-       fastwrite(74,5,0,background, '‹');
+       fastwrite(67,6,0,background,#223+#223+#223+#223+#223+#223+#223+#223);
+       fastwrite(74,5,0,background,#220);
        if not keyboardmode then mouse_show;
        ClearOPL;
        StopBMFPlayer;
@@ -447,8 +406,8 @@ end;
      else
       begin
         fastwrite(66,5,0,7,'FM Music');
-        fastwrite(67,6,background,background, 'ﬂﬂﬂﬂﬂﬂﬂﬂ');
-        fastwrite(74,5,background,background, '‹');
+        fastwrite(67,6,background,background,#223+#223+#223+#223+#223+#223+#223+#223);
+        fastwrite(74,5,background,background,#220);
         mouse_show;
         PlayBMFdata(@intro8,3797);
         fmplaying := true;
@@ -462,8 +421,8 @@ end;
         begin
          fastwrite(66,7,0,7,'Sample');
          if keyboardmode then putchar(66,7,'S',4,7);
-         fastwrite(67,8,0,background, 'ﬂﬂﬂﬂﬂﬂ');
-         fastwrite(72,7,0,background, '‹');
+         fastwrite(67,8,0,background,#223+#223+#223+#223+#223+#223);
+         fastwrite(72,7,0,background,#220);
          mouse_show;
          Playback(false);
          Port[$0A] := $4 + cfg.wssdma;
@@ -479,8 +438,8 @@ end;
         else
         begin
          fastwrite(66,7,0,7,'Sample');
-         fastwrite(67,8,background,background, 'ﬂﬂﬂﬂﬂﬂ');
-         fastwrite(72,7,background,background, '‹');
+         fastwrite(67,8,background,background,#223+#223+#223+#223+#223+#223);
+         fastwrite(72,7,background,background,#220);
          mouse_show;
 
          mutedac(leftandright,true);
@@ -494,8 +453,8 @@ end;
      Procedure PlayMidi;
      begin
         fastwrite(66,9,0,7,'Wavetable');
-        fastwrite(67,10,background,background, 'ﬂﬂﬂﬂﬂﬂﬂﬂﬂ');
-        fastwrite(75,9,background,background, '‹');
+        fastwrite(67,10,background,background,#223+#223+#223+#223+#223+#223+#223+#223+#223);
+        fastwrite(75,9,background,background,#220);
         mouse_show;
         NoteOff(1,48,127);
         SetPatch(1,1);
@@ -504,8 +463,8 @@ end;
         mouse_hide;
         fastwrite(66,9,0,7,'Wavetable');
         if keyboardmode then putchar(66,9,'W',4,7);
-        fastwrite(67,10,0,background, 'ﬂﬂﬂﬂﬂﬂﬂﬂﬂ');
-        fastwrite(75,9,0,background, '‹');
+        fastwrite(67,10,0,background,#223+#223+#223+#223+#223+#223+#223+#223+#223);
+        fastwrite(75,9,0,background,#220);
         mouse_show;
       end;
 
@@ -854,21 +813,6 @@ end;
       SetSBMode(cfg); {Set OPTi Controller to SB Mode}
       DSP_Reset(sb.base);   {Reset sound blaster dsp}
       SB_ResetMixer;
- (*     if s = 'DAC' then
-      begin
-        SB_Setvolume(DAC,left,round((vl / 2)));  {Set volumes in again in SB Mixer}
-        SB_Setvolume(DAC,right,round((vr / 2))); {Just to be save...}
-      end;
-      if s = 'AUX1' then
-      begin
-       SB_Setvolume(CD,left,round((vl / 2)));
-       SB_Setvolume(CD,right,round((vr / 2)));
-      end;
-      if s = 'AUX2' then
-      begin
-       SB_Setvolume(FM,left,round((vl / 2)));
-       SB_Setvolume(FM,right,round((vr / 2)));
-      end;*)
 
       case sbfreq.chan of
        0: SB_SetOutput(false,boolean(filter));  {Set Mono output}
@@ -1395,7 +1339,7 @@ until (key =  #27);
   clrscr;
   cursor(true);
   writeln(Title);
-  writeln('FM tune: "Intro #8" by The Brain / Razor 1911');
+  writeln('FM tune: "Intro #8" by The Brain / Razor1911');
   writeln('');
 
   if not  SaveSettings then
