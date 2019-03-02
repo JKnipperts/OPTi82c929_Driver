@@ -1,5 +1,5 @@
 {Low level driver for Analog Devices AD1848 Soundport codec
- V 0.8 (c) 2018 by Jan Knipperts}
+ V 1.0 (c) 2019 by Jan Knipperts}
 
 
 
@@ -905,22 +905,20 @@ begin
 Procedure AD1848_SetVolume(VolumeType, Channel, Volume : Byte);
 var reg,reg2 : byte;
 begin
-  {WSS has only attenuation regs, so we totally mute outputs to get
-      silence w/volume 0 }
+
 
     if volume > 30 then volume := 30;
     volume := 30-volume;
 
-   if (volume = 30) then
-   begin
-    Case VolumeType Of
-      DAC          : MuteDAC(Channel,true);
-      AUX1         : MuteAUX1(Channel,true);
-      AUX2         : MuteAUX2(Channel,true);
+    {The codec has only attenuation regs, so we totally mute outputs to get
+     silence with volume 0 }
+
+    if (volume = 30) then
+    begin
+      set_bit(volume,7,true);
     end;
-   end
-   else
-   begin
+
+
     Case Channel Of
       Left         :
                    begin
@@ -937,8 +935,7 @@ begin
                      WriteCODECReg(VolumeType,volume);
                      WriteCODECReg(VolumeType+1,volume);
                    end;
-    End;
-   end;
+    end;
 
 end;
 
@@ -948,6 +945,7 @@ var  Volume,vl,vr : Byte;
 begin
    vl := ReadCODECReg(VolumeType);
    vr := ReadCODECReg(VolumeType+1);
+
    vl := vl and 31;
    vr := vr and 31;
 
