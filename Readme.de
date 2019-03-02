@@ -1,0 +1,299 @@
+Optimierter MAD16 PRO Soundkartentreiber fr DOS
+-------------------------------------------------
+
+Ein kurzes Vorwort zu diesem Projekt:
+Mitte der 1990er Jahre waren Soundkarten mit einem OPTi 82c929 Chip 
+(auch als MAD16 PRO bekannt) und einem Windows Sound System kompatiblen 
+Codec sehr weit verbreitet.  Dieser Chip ist ein reiner Controllerchip und 
+erzeugt selbst keinerlei Ton. Seine Aufgabe besteht darin, ein Windows Sound 
+System kompatiblen 16-bit Codec und anderen Komponenten der Soundkarte (CD-ROM,
+FM-Synthesizer, MIDI Interface) mit dem BUS-System des Computers zu verbinden 
+und die Steuerung dieser Komponenten zu bernehmen. Zus„tzlich simuliert der 
+Soundcontroller auch den DSP eines Sound Blaster Pro an den entsprechenden 
+Ports und wandelt dort eingehende Befehle in solche um, die der WSS Codec 
+interpretieren kann.  Eine so konstruierte Soundkarte untersttzt daher sowohl 
+den Windows Sound System Standard mit bis zu 48 kHz Samplerate und 16 Bit Stereosound, als auch Sound Blaster Pro â€“ den damaligen Standard fÃ¼r die Soundausgabe von Spielen unter DOS. 
+Allerdings wurde die Treiberuntersttzung fr DOS angesichts der schnellen
+Verbreitung von Windows mit seiner Audio-API zunehmend zweitrangig und die 
+mitgelieferten DOS-Treiber dienten oft nur noch einer ersten Initialisierung 
+der Karte, bevor dann der Windows Treiber bernahm und oft standen unter DOS 
+nicht mehr alle Funktionen der Soundkarte zur Verfgung. 
+Sp„tere Treiberversionen sind daher hÃ¤ufig auch nur notdrftig an die 
+Weiterentwicklungen der Hardware angepasst worden.  Besonders bei den 
+verwendeten Codecs gab es eine rasante technische Weiterentwicklung.
+Das macht es heutigen Sammlern und Freunden alter Hardware schwer, diese 
+Soundkarten unter DOS fehlerfrei zum Laufen zu bringen. Im Internet finden 
+sich fr diese Soundkarten daher diverse Tipps und Tricks, wie beispielsweise 
+die Karte erst mit dem Treiber des Kartenherstellers und dann noch einmal mit 
+dem Referenztreiber von OPTi zu initialisieren.  
+Als ich selbst einen alten 486er PC restaurierte und dabei versuchte eine 
+Miro FM10 Soundkarte unter DOS zum Laufen zu bringen, da fiel mir auf, dass die
+von mir getesteten Spiele mit verschiedenen Versionen der Treiber 
+unterschiedlich gut liefen. Zudem war der Treiber des Herstellers ein einziges,
+schlecht programmiertes rgernis.  Der Treiber von OPTi brachte zwar Besserung,
+aber auch hier liefen nicht alle Spiele mit der Soundkarte. Mit jeder getesteten
+Version des Treibers liefen aber andere Spiele... 
+Daher dachte ich mir, dass es m”glich sein msste, mit etwas Feintuning per 
+Software mehr Spiele zum Laufen zu bringen...
+Die Datenbl„tter fr die Chips von OPTi sind im Internet leicht zu finden und 
+so entschloss ich mich, es doch einmal mit einem eigenen Programm zu versuchen.
+Immer mal wieder programmierte ich daran weiter, erg„nzte Funktionen und so 
+entstand ein eigener DOS-Treiber, der den Nutzer alle Einstellungen selbst 
+ver„ndern und seine Soundkarte optimal konfigurieren l„sst.
+
+Der Treiber besteht aus den folgenden Programmen:
+SETUP.EXE
+929INIT.EXE
+MIXER.EXE
+SBFIX.COM
+
+SETUP
+-----
+Erlaubt die komfortable Konfiguration aller Ressourcen der Soundkarte und 
+weitere Feineinstellungen des Soundcontrollers. 
+Das Programm kann entweder mit der Tastatur oder mit der Maus bedient werden,
+wird eine Maus erkannt, dann wird automatisch die Maussteuerung eingeschaltet.
+Nach dem Start des Programms k”nnen Sie zun„chst die damals blichen Standard-
+einstellungen fr Sound Blaster, WSS, die MPU401 Midi-Schnittstelle und ein 
+evtl. an die Karte angeschlossenes CD-ROM Laufwerk vornehmen.
+ 
+Bei Steuerung mit der Maus klicken Sie einfach auf die kleinen Pfeile rechts 
+neben den einzelnen Einstellungen, um die Werte zu erh”hen bzw. zu verringern. 
+Bei Steuerung per Tastatur w„hlen Sie mit Pfeiltasten die gewnschte Option und
+schalten mit "+" bzw. "-" die Werte um. Alternativ auch mit Enter. 
+Die Button k”nnen Sie entweder mit den Cursortasten ausw„hlen, oder mit den 
+eweiligen Anfangsbuchstaben (A,T,S (oder auch Q fr Quit) ) aufrufen.
+Mit "Save and Quit" werden die Einstellungen gespeichert und das Programm beendet. 
+An dieser Stelle werden Sie noch gefragt, ob die AUTOEXEC.BAT angepasst werden 
+soll. Antworten Sie hier mit "Yes", dann wird die SET BLASTER Variable an die 
+aktuellen Sound Blaster Einstellungen angepasst und die Datei 929INIT.EXE 
+eingetragen, wodurch die Soundkarte bei jedem Start des Rechners direkt 
+aktiviert wird. Wollen Sie das Programm Beenden, ohne nderungen zu speichern,
+dann drcken Sie einfach ESC.
+
+Test Settings
+Mit dem Button "Test settings" k”nnen Sie ausprobieren, ob die Soundkarte 
+mit den vorgenommenen Einstellungen funktioniert oder ob Hardwarekonflikte 
+vorliegen.
+ 
+Advanced Options
+Der Button "Advances Options" ruft ein weiteres Men mit Einstellungs-
+m”glichkeiten auf, die die Funktionsweise der Soundchips und vor allem deren 
+Kompatibilit„t mit dem Sound Blaster Pro Standard beeinflussen.
+ 
+Codec Selection
+Hier l„sst sich ausw„hlen, ob auf ihrer Soundkarte ein Codec der Firma 
+Crystal Semiconductor oder einer von Analog Devices verbaut ist. 
+Diese Codecs sind zwar miteinander kompatibel, aber es gibt doch minimale 
+Unterschiede bei den Zugriffszeiten u.„. 
+Sollten Sie also Probleme mit verzerrter Soundausgabe bemerken, dann prfen 
+Sie zun„chst, ob hier der korrekte Codec eingestellt ist.
+
+Frequency for WSS mode / Frequency for SB mode
+Hier k”nnen Sie ausw„hlen, mit welchen Einstellungen der Codec fr den 
+jeweilige Betriebsmodus eingerichtet wird. Das hat sehr groáe Auswirkungen auf 
+viele Spiele.  
+Sollten Audiofehler in Spielen auftreten, Soundeffekte zu schnell oder zu 
+langsam oder in zu geringer Qualit„t wiedergegeben werden, dann k”nnen Sie hier
+die Einstellungen anpassen. 
+W„hrend einige „ltere, fr den einfachen Sound Blaster programmierte, Spiele mit
+einer Initialisierung der Karte in Mono besser funktionieren, ben”tigen neuere 
+Spiele fr den Sound Blaster Pro eine Initialisierung mit 22 kHz, 8-Bit, Stereo,
+um Soundeffekte in Stereo ausgeben zu k”nnen. 
+Sollten trotz dieser Einstellung dennoch Probleme mit der Wiedergabe in Stereo
+auftreten, dann verwenden sie zus„tzlich die beiliegende SBFIX.COM. 
+
+Crystals used for SB frequencies
+Diese Einstellung h„ngt eng mit der vorhergehenden zusammen.
+Der Codec Ihrer Soundkarte verwendet zwei Kristalle (24,5 und 16,9 MHz), 
+um Sampleraten zwischen 5 und 48 kHz erzeugen zu k”nnen. 
+Mit dieser Einstellung k”nnen Sie ausw„hlen, ob im Sound Blaster Modus beide 
+oder nur der 16 MHz Kristall fr Sampleraten zur Verfgung steht.
+Bei alleiniger Verwendung des 16 MHz Kristalls stehen entsprechend weniger 
+m”gliche Sampleraten zur Verfgung. 
+Einige wenige Spiele kommen mit der 16+24 MHz Option nicht zurecht und geben
+keine oder gest”rte Soundeffekte aus (z.B. Hocus Pocus).
+
+Yamaha Synthesis Chip selection
+W„hlen Sie hier aus, ob auf Ihrer Soundkarte ein Yamaha OPL3 oder OPL4 Chip 
+verbaut ist. Ein OPL4 muss (auch im FM-Modus) mit anderen Wartezyklen 
+angesprochen werden, als sein Vorg„nger. Daher prfen Sie zun„chst diese 
+Einstellungen, wenn Spiele bei Verwendung eines OPL4 einen FM-Chip nicht 
+korrekt erkennen.
+
+Sound Blaster DSP Version
+Hier l„sst sich ausw„hlen, welche Version eines Sound Blaster DSP ausgegeben 
+wird. 
+
+Automatic Volume Control
+Automatische Anpassung der Lautst„rke. 
+Diese Option fhrt in vielen Spielen zu Problemen und sollte daher ausgeschaltet
+werden. Ein gutes Beispiel ist hier der Schuá beim Start des Spiels 
+Black Thorne, der kaum h”rbar ist, wenn die Option eingeschaltet ist. 
+
+Sound Blaster ADPCM support
+Schaltet die Untersttzung fr mit dem ADPCM Verfahren komprimierte Audiodaten
+an oder aus. Anders als die originalen Sound Blaster Modelle von Creative Labs
+untersttzen die meisten WSS Codecs dieses Verfahren nicht in ihrer Hardware.
+Die Dekomprimierung wird vom Controller bernommen, wenn diese Option 
+eingeschaltet ist.  
+
+Command FIFO in Sound Blaster mode
+Schaltet einen kleinen Pufferspeicher an oder aus, in dem Befehle fr 
+den Sound Blaster DSP zwischengespeichert werden, um sie der Reihe nach 
+abarbeiten zu k”nnen.  Diese Option sollte eingeschaltet sein, vor allem bei
+schnelleren Systemen.
+
+SB mixer voice volume emulation
+Ist diese Einstellung eingeschaltet, werden einige spezielle Eigenschaften 
+des Sound Blaster Pro Mixerchips emuliert. Ich empfehle sie eingeschaltet zu 
+lassen, da sonst einige Spiele und Programme Schwierigkeiten bei der Erkennung 
+der Karte als Sound Blaster haben.
+
+Allow access to codec in SB mode
+Eingeschaltet erlaubt diese Option den direkten Zugriff auf den Codec auch bei
+aktivem Sound Blaster Modus. Sollte ausgeschaltet sein, da es sonst zu 
+Fehlfunktionen kommen kann.
+
+Der Button "Main menu" bringt Sie zurck ins Hauptmen und ber den Button 
+"Next" kann eine weitere Seite mit Einstellungen aufgerufen werden.
+ 
+
+Zweite Seite der erweiterten Einstellungen:
+
+
+Disable access to FM and SB/WSS:
+Ist diese Option eingeschaltet, dann werden der FM-Chip sowie Sound Blaster 
+und Windows Sound System vom Systembus getrennt.
+Einzig die MPU401 Schnittstelle steht zur Verfgung. 
+Diese Einstellung ist sinnvoll, wenn die Soundkarte zusammen mit einer anderen
+Karte verwendet wird, die selbst kein MPU401 mitbringt.
+
+Game Port Timer Mode
+Soll fr das Timing der Datenbertragung ber den Joystick- und Midianschluss 
+der interne Timer der Soundkarte, oder der Timer eines extern angeschlossenen
+Ger„ts verwendet werden?
+
+Filter SB output
+Schaltet den Filter im emulierten Sound Blaster Mixer ein oder aus.
+Dies funktioniert natrlich nur, wenn die Soundkarte mit einem entsprechenden 
+Filter ausgestattet ist. Bei Ausgabe in Stereo oder h”heren Sampleraten sollte
+der Filter ausgeschaltet werden.
+
+Die anderen Optionen sollten nur zur Probleml”sung testweise ver„ndert werden.
+Hier lassen sich auch Eistellungen vornehmen, die vom Hersteller als fest 
+gesetzt (reserved) deklariert wurden. Ich empfehle dringend diese Einstellungen
+nur mit Vorsicht zu ver„ndern, da sie zu Fehlfunktionen der Soundkarte fhren 
+k”nnen!
+
+Kommandozeilenbefehle fr Setup.exe:
+Das Setupprogramm unterstÃ¼tz die folgenden Kommandozeilenbefehle:
+/K 		Aktiviert die Tastatursteuerung 
+/NODETECT	Beim Start des Programms wird keine Prfung 
+                der Hardware vorgenommen
+/NOINIT		Bei Programmende wird die Soundkarte nicht neu initialisiert
+/RESET		šberschreibt die aktuell gespeicherten Einstellungen mit den 
+		Werkseinstellungen von OPTi.
+
+
+
+
+929INIT
+-------
+Dieses Programm initialisiert die Soundkarte mit den vom Setup gespeicherten 
+Einstellungen. Auch l„sst sich der Modus der Soundkarte einfach von der 
+Kommandozeile aus wechseln.
+ 
+"/INIT" 
+initialisiert die Soundkarte mit den aktuellen Einstellungen aus dem Setup. 
+
+"/SB" oder "/WSSâ" 
+Setzt die Karte in den Sound Blaster oder Windows Sound System Modus. 
+
+"/S" bzw. "/M" 
+Umschalten zwischen Mono und Stereo Ausgabe.
+
+"/INFO" 
+gibt die aktuelle Einstellung des Sound Controllers aus.
+
+"/Q" und "/N" sind zus„tzliche Optionen: 
+/Q reduziert die Textausgabe auf ein Minimum 
+(z.B. fr den Start aus der Autoexec.bat) 
+/N l„sst mehrere Initialisierungen hintereinander zu.
+
+Die Bedienung von der Kommandozeile aus erlaubt es, Batchdateien fr 
+einzelne Spiele oder Programme anzulegen. Beispielsweise wenn die Karte 
+normalerweise im Sound Blaster Modus betrieben wird und nur fr einige,
+wenige Spiele in den Windows Sound System Modus und bei Spielende wieder 
+in den Sound Blaster Modus gesetzt werden soll 
+oder wenn einzelne Spiele eine Initialisierung in Stereo oder Mono ben”tigen.
+
+Beispiel fr eine Batchdatei, die Tyrian im WSS Modus startet und dann wieder
+zurck in den Sound Blaster Modus wechselt:
+
+@ECHO OFF
+C:\SOUND\929INIT.EXE /WSS /Q
+C:\SPIELE\TYRIAN\TYRIAN.EXE
+C:\SOUND\929INIT.EXE /SB /Q
+
+
+MIXER
+------
+Mixer.exe erlaubt die Einstellung der Lautst„rke fr die einzelnen Ein- 
+und Ausg„nge der Soundkarte sowie einen Soundcheck.
+Wie auch im Setup wird standardm„áig mit der Maus gesteuert. 
+Ist keine Maus vorhanden, kann mit den Cursortasten eine Lautst„rke oder Option
+angew„hlt werden. Mit +/- bzw. Enter oder der Leertaste k”nnen Sie die 
+Lautst„rke einstellen oder Einstellungen aktivieren bzw. deaktivieren.
+ 
+Wenn der Mixer gestartet wird, werden die aktuell im Codec eingestellten 
+Werte angezeigt.  Durch Drcken der Taste F1 k”nnen Sie schnell die zuletzt 
+gespeicherten Einstellungen laden.
+
+Kommandozeilenbefehle fr Mixer.exe:
+Der Mixer erm”glicht eine nderung der Lautst„rke auch von der 
+Kommandozeile aus:
+
+"MIXER.EXE DAC 50 50" setzt z.B. die Wiedergabelautst„rke von digitalen 
+Audiodaten (DAC Output) fr beide Kan„le auf 50%
+
+Weitere m”gliche Parameter sind:
+/K		Schaltet die Tastatursteuerung auch bei vorhandener Maus ein.
+/NODETECT	Fhrt bei Programmstart keine Prfung der Hardware durch.
+
+
+
+SBFIX
+-----
+SBFIX.COM ist ein kleines, speicherresidentes Programm, das die Soundkarte im 
+Sound Blaster Modus zur Ausgabe in Stereo zwingt. Manche Spiele haben mit 
+OPTi82c929 Soundkarten Probleme bei der Stereoausgabe und schalten nach kurzer 
+Zeit um auf Mono. Hier sorgt dieses kleine Programm fr Abhilfe. 
+Einfach vor dem Start des Spiels ausfhren.
+
+Installation des Treibers
+---------------------------
+Die Installation des Treibers ist sehr einfach:
+1.	Kopieren Sie einfach die Dateien 929INIT.EXE, SETUP.EXE und MIXER.EXE
+	in ein beliebiges Verzeichnis auf der Festplatte. 
+
+2.	Wechseln Sie nun in das Verzeichnis und starten Sie Setup.exe. 
+	Konfigurieren Sie die Soundkarte und lassen Sie das Setupprogramm die 
+	n”tigen Eintragungen in der Autoexec.bat vornehmen.
+
+3.	Starten Sie Mixer.exe und stellen Sie die gewnschten Lautst„rken ein.
+
+Fertig.
+
+Quelltext
+-----------
+Der komplette Quellcode der enthaltenen Programme wurde zur freien Verfgung
+bereitgestellt (unter MIT Lizenz) und kann unter 
+https://github.com/JKnipperts/OPTi82c929_Driver eingesehen und heruntergeladen
+werden.
+
+Haftungsausschluss
+-------------------
+Am Ende noch der leider n”tige Satz:
+Ich bernehme keine Haftung fr m”gliche Sch„den, die durch die Benutzung 
+meiner Programme entstehen!

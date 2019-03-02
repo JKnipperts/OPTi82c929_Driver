@@ -1,0 +1,271 @@
+Optimized MAD16 PRO sound card driver for DOS
+----------------------------------------------
+
+In the mid-1990s sound cards build around an OPTi 82c929 chip and a Windows 
+Sound System compatible codec were widely used. The 82c929 chip is a pure 
+controller chip and does not produce any sound itself. Its task is to connect a
+Windows Sound System compatible 16-bit codec and other components of the sound
+card (CD-ROM, FM synthesizer, MIDI interface) to the BUS system of the computer
+and to take over the control of these components. In addition it emulates the 
+DSP of a Sound Blaster Pro on the corresponding ports and converts incoming 
+commands into those that can be interpreted by the WSS codec.
+A sound card constructed in this way supports both the Windows Sound System 
+Standard with up to 50 kHz sample rate and 16 bit stereo sound, as well as 
+Sound Blaster Pro - the standard at that time for the sound output of games 
+under DOS. However, due to the rapid spread of Windows with its audio API, 
+driver support for DOS became increasingly secondary and the DOS drivers 
+provided often only served to initialize the card before the Windows driver 
+took over and often not all functions of the sound card were available under 
+plain DOS. Later driver versions have therefore often been adapted only scantily
+to the further developments of the hardware. But the codecs used in particular 
+were subject to rapid technical development.
+This makes it difficult for today's collectors and friends of old hardware to 
+get these sound cards to run flawlessly under DOS. Therefore, there are various
+hints and tricks for these sound cards on the Internet, such as initializing 
+the card first with the driver of the card manufacturer and then again with the
+reference driver of OPTi. 
+When I restored an old 486 PC myself and tried to run a Miro FM10 sound card 
+under DOS, I noticed that the games I tested worked differently well with 
+different versions of the drivers. In addition, the manufacturer's driver was a
+single, badly programmed nuisance.  The OPTi driver did improve, but not all 
+games ran with it....but with every tested version of this driver other games 
+ran....
+So I thought to myself that it should be possible to make more games run well 
+with some fine-tuning 
+via software....
+
+The data sheets for the OPTi chips are easy to find on the internet and so I 
+decided to try it with my own program. I presented these first attempts in the 
+german DOS-Reloaded Forum and they found great approval. 
+Every now and then I continued programming, added functions and so I created 
+my own DOS driver, which lets the user change all settings himself and 
+configure his sound card optimally.
+
+The driver consists of the following programs:
+
+SETUP.EXE
+MIXER.EXE
+929INIT.EXE
+
+
+SETUP
+------
+Setup.exe allows you the comfortable configuration of all resources of the 
+sound card and further fine tuning of the sound controller.
+The program can be operated either with the keyboard or with the mouse, 
+if a mouse is detected, the mouse control is automatically switched on.
+After starting the program, you can make the usual default settings for 
+Sound Blaster, WSS, the MPU401 Midi interface and a CD-ROM drive connected 
+to the card.
+ 
+When controlling with the mouse, simply click on the small arrows to the 
+right of the individual settings to increase or decrease the values. 
+For keyboard control, select the desired option with the arrow keys and 
+switch the values with "+" or "-". Alternatively also with Enter. 
+You can select the buttons either with the cursor keys, which are called 
+with the respective initial letters (A,T,S (or also Q for Quit) ).
+With "Save and Quit" the settings are saved and the program is terminated. 
+At this point you will be asked whether the AUTOEXEC.BAT should be adjusted.
+If you answer with "Yes", the SET BLASTER variable will be adjusted to the 
+current Sound Blaster settings and the file 929INIT.EXE will be entered, 
+whereby the sound card will be activated every time the computer is started. 
+If you want to quit the program without saving any changes, simply press ESC.
+
+Test Settings
+With the button "Test settings" you can try out whether the sound card works 
+with the settings made or whether there are hardware conflicts.
+ 
+Advanced Options
+The button "Advances Options" opens another menu with settings that influence the functionality of the sound chips and especially their compatibility 
+with the Sound Blaster Pro Standard.
+
+Codec Selection
+Here you can select whether a codec from Crystal Semiconductor or one from 
+Analog Devices is installed on your sound card. 
+These codecs are compatible with each other, but there are minimal differences 
+in access times etc. If you should notice problems with distorted sound
+output or similar, then first check whether the correct codec is set here.
+
+Frequency for WSS mode / Frequency for SB mode
+Here you can select with which settings the codec is set up for the respective 
+operating mode. This has a big impact on many games.
+If audio errors occur in games, sound effects are played back too quickly or 
+too slowly, or in too low a quality, you can adjust the sample rate here.
+While some older games programmed for the simple Sound Blaster work better with an initialization of the card in mono, newer games for the Sound Blaster Pro
+require an initialization with 22 kHz, 8 bit, stereo to output sound effects in stereo. If you encounter problems with stereo playback despite this setting,
+please also use the SBFIX.COM included with the Sound Blaster Pro. 
+
+Crystals used for SB frequencies
+This setting is closely related to the previous one. Your sound card's codec 
+uses two crystals (24.5 and 16.9 MHz) to generate sample rates between 5 and 48 kHz.
+This setting allows you to select whether both or only the 16 MHz crystal is 
+available for sample rates in Sound Blaster mode.  
+If the 16 MHz crystal is used alone, the sample rates will be correspondingly 
+lower. A few games do not work with the 16+24 MHz option and do not produce 
+any or distorted sound effects (e.g. Hocus Pocus).
+
+Yamaha Synthesis Chip selection
+Select whether your sound card has a Yamaha OPL3 or OPL4 synthesizer chip 
+installed. An OPL4 must be addressed (also in FM mode) with different waiting 
+cycles than its predecessor. Therefore, first check these settings if games do 
+not recognize an FM chip correctly when using an OPL4.
+
+Sound Blaster DSP Version
+Here you can select which version of a Sound Blaster DSP is shown to other 
+programs.
+
+Automatic Volume Control
+Automatic volume adjustment. This option causes problems in many games and should therefore be turned off. 
+A good example for issues with this option turned on is the shot when starting the game Black Thorne. If this option is turned on, this sample will be played
+with hardly audible volume.
+
+Sound Blaster ADPCM support
+Turns support for ADPCM compressed audio data on or off. 
+Unlike the original Sound Blaster models from Creative Labs, most WSS codecs 
+do not support this method in their hardware.
+Decompression is performed by the controller (and CPU) when this option is 
+turned on. 
+
+Command FIFO in Sound Blaster mode
+Toggles a small buffer memory on or off where commands for the Sound Blaster 
+DSP are buffered for sequential processing.
+This option should be turned on, especially on faster systems.
+
+SB mixer voice volume emulation
+If this setting is enabled, some special properties of the Sound Blaster Pro 
+mixer chip will be emulated. 
+I recommend that you leave it turned on, otherwise some games and programs 
+will have trouble recognizing the card as Sound Blaster.
+
+Allow access to codec in SB mode
+When enabled, this option allows direct access to the codec even when 
+Sound Blaster mode is active. Should be switched off, otherwise malfunctions 
+may occur.
+
+The "Main menu" button takes you back to the main menu and the "Next" button 
+opens another page with settings.
+
+Advanced settings - Page 2:
+
+Disable access to FM and SB/WSS
+If this option is enabled, the FM chip, Sound Blaster, and Windows Sound System
+will not be available and will be disconnected from the system bus. 
+Only the MPU401 interface is available. This setting is useful if the sound 
+card is used together with another sound card that does not have an MPU401.
+
+Game Port Timer Mode
+Should the internal timer of the sound card or one of the timers of an 
+externally connected device be used for the timing of the data transfer 
+via the joystick and MIDI connection?
+
+Filter SB output
+Turns the filter in the emulated Sound Blaster Mixer on or off.  
+Of course, this only works if the sound card is equipped with an appropriate 
+filter. When outputting in stereo or higher sample rates, the filter should 
+be switched off.
+
+The other options should only be changed for testing purposes. 
+Here you can also make settings that have been declared as reserved by the 
+manufacturer. I strongly recommend to change these settings bur with caution,
+as they can lead to malfunctions of the sound card!
+
+Command line commands for Setup.exe:
+The setup program supports the following command line commands:
+/K Activates keyboard control even if a mouse is present
+/NODETECT When the program is started, the hardware is not checked.
+/NOINIT The sound card is not reinitialized at the end of the program.
+/RESET Overwrites the currently stored settings with the default settings 
+       provided by OPTi.
+
+
+
+929INIT
+-------
+This program initializes the sound card with the settings stored in the setup. 
+The mode of the sound card can also be easily changed from the command line.
+
+"/INIT" 
+initializes the sound card with the current settings from the setup. 
+"/SB" or "/WSS" 
+set the card to Sound Blaster or Windows Sound System mode. 
+"/S" or "/M" 
+switch between mono and stereo output in the current mode.
+
+"/INFO" 
+outputs the current setting of the sound controller.
+
+
+"/Q" and "/N" 
+are additional options: 
+"/Q" reduces the text output to a minimum (e.g. for starting from Autoexec.bat) and 
+"/N" allows several initializations in a row.
+
+The operation from the command line allows to create batch files for single 
+games or programs. For example, if the card is normally operated in 
+Sound Blaster mode and is only to be set to Windows Sound System mode 
+for a few games and then to Sound Blaster mode again at the end of the game, or
+if individual games require an initialization in stereo or mono.
+
+Example fo a batch file to run Tyrian in WSS mode and then switch back
+to SB mode:
+
+@ECHO OFF
+C:\SOUND\929INIT.EXE /WSS /Q
+C:\GAMES\TYRIAN\TYRIAN.EXE
+C:\SOUND\929INIT.EXE /SB /Q
+
+
+MIXER
+------
+The mixer allows you to set the volume for each of the sound card's inputs 
+and outputs, as well as perform a sound check.
+As in the setup, the mouse is used by default. If no mouse is available, 
+the cursor keys can be used to select a volume or an option.
+With +/- or Enter or the space bar you can adjust the volume or activate or 
+deactivate settings.
+Note: When the mixer is started, the volume levels currently set in the codec 
+are displayed. By pressing the F1 key, you can quickly load the most recently 
+saved settings.
+
+Command line commands for Mixer.exe:
+The mixer also allows you to change the volume from the command line:
+"MIXER.EXE DAC 50 50" sets e.g. the playback volume of digital audio 
+data (DAC output) for both channels to 50%.
+
+Other possible parameters are:
+/K Switches the keyboard control on even if the mouse is present.
+/NODETECT Does not check the hardware at program start...
+
+SBFIX
+-----
+SBFIX is a small, memory-resident program that forces the sound card to output 
+in stereo in Sound Blaster mode. 
+Some games have problems with stereo output with OPTi82c929 sound cards and 
+switch to mono after a short time. Here this small program provides remedy. 
+Just run it before starting the game.
+
+
+INSTALLATION OF THE DRIVER
+--------------------------
+Installing the driver is very easy:
+1. Simply copy the files 929INIT.EXE, SETUP.EXE and MIXER.EXEto any directory 
+   on the hard disk. 
+2. Now change to the directory on your hard disk and start Setup.exe. 
+   Configure the sound card and let the setup program make the necessary 
+   entries in the Autoexec.bat.
+3. Start Mixer.exe and set the desired volumes.
+
+That's it. Installation is done.
+
+SOURCE CODE
+-----------
+The complete source code for the programs contained here has been made available for free (under MIT license) and can be viewed and downloaded at 
+https://github.com/JKnipperts/OPTi82c929_Driver.
+
+DISCLAIMER
+----------
+At the end the unfortunately necessary sentence:
+I assume no liability for any damage caused by the use of my programs!
+
+February 2019
+Jan Knipperts
