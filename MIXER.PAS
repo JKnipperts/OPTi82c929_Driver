@@ -1,9 +1,47 @@
 {*****************************************************************************
    Mixer for my Low Level Driver for OPTi 82C929 Soundcards
 *****************************************************************************
-Version:    1.11
+Version:    1.12
+Date   :    24.02.2019
 Author :    Jan Knipperts
 *****************************************************************************}
+{Changelist 0.8 - 0.9:
+ Kleiner Bugfix - OPL Volume kann nun auf 100% gestezt werden
+ Mauszeiger verschwindet nicht mehr, wenn Button angeklickt wird
+ Nur eigene Textfunktionen, Unit CRT wird nicht mehr verwendet
+ Bezeichnungen etwas angepasst
+ Eingangspegel f�r Input w�hlbar
+
+ 0.9 - 0.9b
+ Nutzt SB Pro unit
+
+ 0.9 - 0.9c
+ - Komplette umgestaltung. Nutzt jetzt nur WSS und
+   SB Volume wird erst am Ende gesetzt.
+ - PostMix und Digital Mixing hinzugef�gt
+ - Nutzt jetzt eigene BMF-Unit f�r FM-Sound
+ - Kleiner Bugfix beim MPU-Soundcheck
+ - Einige grafische Verbesserungen
+ - Mousesteuerung optimiert
+
+ 1.0
+ - AUX1 als Input hinzugef�gt
+ - Darstellung angepasst
+ - Kleine grafische Verbesserungen und bugfixes
+
+ 1.1
+ - Tastatursteuerung
+ - Parameter K und ?
+ - Bugfix zum Setzen von Mono/Stereo
+
+ 1.11
+ - Bug in Set_volume verhinderte mute bei Lautst�rke 0
+
+ 1.12
+ - Verbesserte Verarbeitung der Kommandozeile
+ - M�glichkeit Hardwarepr�fung zu �berspringen
+ - Kleine Verbesserungen im Code}
+
 
 Program AD1848_Mixer;
 uses opti929,mpu,oplfm,opl4,
@@ -48,7 +86,7 @@ type
 
 
 const
-     title          : string = 'MAD16 Pro Mixer v.1.11 (c) 2019 Jan Knipperts';
+     title          : string = 'MAD16 Pro Mixer v.1.12 (c) 2019 Jan Knipperts';
      footer         : string = 'F1 = Load last settings, ESC = Save and quit';
      kfooter        : string = 'Up/Down = Select; +/- = Set Volume; Space/Enter = Toggle; F,S,W = Soundcheck';
      cfgfile        : string = 'sound.cfg';
@@ -78,12 +116,14 @@ var
  irqcalled                         : boolean;
  sb                                : sbcfg;
  index                             : word;
- timeout,SBm,dmix,keyboardmode     : boolean;
+ timeout,SBm,
+ dmix,keyboardmode,
+ volumecmd,nodetect                : boolean;
  volumes                           : codecvolumes;
  f                                 : file;
  key                               : char;
  dma,  Offset, Page                : Word;
- dl,dh                             : Byte;
+ dl,dh,filter                      : Byte;
  s                                 : string;
  vl,vr,input,mgain,select          : byte;
  c1,c2                             : integer;
@@ -135,6 +175,7 @@ begin
      blockread(f,cfg,sizeof(cfg));
      blockread(f,sbfreq,sizeof(freqconfig));
      blockread(f,wssfreq,sizeof(freqconfig));
+     blockread(f,filter,sizeof(filter));
      blockread(f,volumes,sizeof(codecvolumes));
      close(f);
     {$I+}
@@ -172,6 +213,7 @@ begin
      blockwrite(f,cfg,sizeof(cfg));
      blockwrite(f,sbfreq,sizeof(freqconfig));
      blockwrite(f,wssfreq,sizeof(freqconfig));
+     blockwrite(f,filter,sizeof(filter));
      blockwrite(f,volumes,sizeof(codecvolumes));
      close(f);
     {$I+}
@@ -207,12 +249,12 @@ end;
 
 Procedure Reset_Sliders;
 begin
- putchar(dacl.x,7,'Ä',textcol,background);
- putchar(dacr.x,8,'Ä',textcol,background);
- putchar(aux1l.x,13,'Ä',textcol,background);
- putchar(aux1r.x,14,'Ä',textcol,background);
- putchar(aux2l.x,19,'Ä',textcol,background);
- putchar(aux2r.x,20,'Ä',textcol,background);
+ putchar(dacl.x,7,#196,textcol,background);
+ putchar(dacr.x,8,#196,textcol,background);
+ putchar(aux1l.x,13,#196,textcol,background);
+ putchar(aux1r.x,14,#196,textcol,background);
+ putchar(aux2l.x,19,#196,textcol,background);
+ putchar(aux2r.x,20,#196,textcol,background);
 
  dacl.x  := volumes.dacl+18;
  dacr.x  := volumes.dacr+18;
@@ -221,12 +263,12 @@ begin
  aux2l.x := volumes.aux2l+18;
  aux2r.x := volumes.aux2r+18;
 
- putchar(dacl.x,7,'Û',textcol,background);
- putchar(dacr.x,8,'Û',textcol,background);
- putchar(aux1l.x,13,'Û',textcol,background);
- putchar(aux1r.x,14,'Û',textcol,background);
- putchar(aux2l.x,19,'Û',textcol,background);
- putchar(aux2r.x,20,'Û',textcol,background);
+ putchar(dacl.x,7,#219,textcol,background);
+ putchar(dacr.x,8,#219,textcol,background);
+ putchar(aux1l.x,13,#219,textcol,background);
+ putchar(aux1r.x,14,#219,textcol,background);
+ putchar(aux2l.x,19,#219,textcol,background);
+ putchar(aux2r.x,20,#219,textcol,background);
  fastwrite(69,22,15,0,addspace(round((volumes.gain / 15)*100))+'%');
 
 
@@ -350,23 +392,24 @@ end;
 
 Procedure EnterSBMode;
 begin
-   SB_HaltDMA; {Halt pending DMA transfers}
    Prepare_AD1848_for_SB;
    WaitForCodec;  {Wait for the codec to be ready}
    SetSBMode(cfg); {Set OPTi Controller to SB Mode}
-   SB_ResetMixer;       {Reset the SB mixer}
-   SB_Setvolume(DAC,left,round((volumes.dacl / 4.28)));  {Set new volumes}
-   SB_Setvolume(DAC,right,round((volumes.dacr / 4.28)));
-   SB_Setvolume(CD,left,round((volumes.aux1l / 4.28)));
-   SB_Setvolume(CD,right,round((volumes.aux1r / 4.28)));
-   SB_Setvolume(FM,left,round((volumes.aux2l / 4.28)));
-   SB_Setvolume(FM,right,round((volumes.aux2r / 4.28)));
-   case sbfreq.chan of
-      0: SB_SetOutput(false,true);  {Set Mono output}
-      1: SB_SetOutput(true,true);   {Set Stereo output}
-   end;
    DSP_Reset(sb.base);   {Reset sound blaster dsp}
-   SB_Speaker(false);        {Mute dac}
+   SB_ResetMixer;
+  (* SB_Setvolume(DAC,left,round((volumes.dacl / 2)));  {Set volumes in again in SB Mixer}
+   SB_Setvolume(DAC,right,round((volumes.dacr / 2))); {Just to be save...}
+   SB_Setvolume(CD,left,round((volumes.aux1l / 2)));
+   SB_Setvolume(CD,right,round((volumes.aux1r / 2)));
+   SB_Setvolume(FM,left,round((volumes.aux2l / 2)));
+   SB_Setvolume(FM,right,round((volumes.aux2r / 2)));*)
+
+   case sbfreq.chan of
+      0: SB_SetOutput(false,boolean(filter));  {Set Mono output}
+      1: SB_SetOutput(true,boolean(filter));   {Set Stereo output}
+   end;
+
+   If cfg.sbmix = 0 then SBMixer(false);
 end;
 
 
@@ -393,8 +436,8 @@ end;
      begin
        fastwrite(66,5,0,7,'FM Music');
        if keyboardmode then putchar(66,5,'F',4,7);
-       fastwrite(67,6,0,background, 'ßßßßßßßß');
-       fastwrite(74,5,0,background, 'Ü');
+       fastwrite(67,6,0,background, '��������');
+       fastwrite(74,5,0,background, '�');
        if not keyboardmode then mouse_show;
        ClearOPL;
        StopBMFPlayer;
@@ -404,8 +447,8 @@ end;
      else
       begin
         fastwrite(66,5,0,7,'FM Music');
-        fastwrite(67,6,background,background, 'ßßßßßßßß');
-        fastwrite(74,5,background,background, 'Ü');
+        fastwrite(67,6,background,background, '��������');
+        fastwrite(74,5,background,background, '�');
         mouse_show;
         PlayBMFdata(@intro8,3797);
         fmplaying := true;
@@ -419,21 +462,25 @@ end;
         begin
          fastwrite(66,7,0,7,'Sample');
          if keyboardmode then putchar(66,7,'S',4,7);
-         fastwrite(67,8,0,background, 'ßßßßßß');
-         fastwrite(72,7,0,background, 'Ü');
+         fastwrite(67,8,0,background, '������');
+         fastwrite(72,7,0,background, '�');
          mouse_show;
          Playback(false);
+         Port[$0A] := $4 + cfg.wssdma;
+         Port[$0C] := 0; {Clear the internal DMA flip-flop}
+         WriteCODECReg($0E,0);
+         WriteCODECReg($0F,0);
+         writeCODECreg($0A,$00);   {disable interrupt and pin control}
+         port[$20] := $20;
          mutedac(leftandright,true);
-    (*     Port[$0A] := $4 + cfg.wssdma;
-         Port[$0C] := 0; {Clear the internal DMA flip-flop}*)
          dacplaying := false;
          Wait_for_Mousebutton;
         end
         else
         begin
          fastwrite(66,7,0,7,'Sample');
-         fastwrite(67,8,background,background, 'ßßßßßß');
-         fastwrite(72,7,background,background, 'Ü');
+         fastwrite(67,8,background,background, '������');
+         fastwrite(72,7,background,background, '�');
          mouse_show;
 
          mutedac(leftandright,true);
@@ -447,8 +494,8 @@ end;
      Procedure PlayMidi;
      begin
         fastwrite(66,9,0,7,'Wavetable');
-        fastwrite(67,10,background,background, 'ßßßßßßßßß');
-        fastwrite(75,9,background,background, 'Ü');
+        fastwrite(67,10,background,background, '���������');
+        fastwrite(75,9,background,background, '�');
         mouse_show;
         NoteOff(1,48,127);
         SetPatch(1,1);
@@ -457,8 +504,8 @@ end;
         mouse_hide;
         fastwrite(66,9,0,7,'Wavetable');
         if keyboardmode then putchar(66,9,'W',4,7);
-        fastwrite(67,10,0,background, 'ßßßßßßßßß');
-        fastwrite(75,9,0,background, 'Ü');
+        fastwrite(67,10,0,background, '���������');
+        fastwrite(75,9,0,background, '�');
         mouse_show;
       end;
 
@@ -568,7 +615,7 @@ end;
      Procedure SetGain;
      begin
       fastwrite(69,22,15,0,addspace(round((volumes.gain / 15)*100))+'%');
-     
+
       mouse_show;
 
       if input = mic then
@@ -604,20 +651,54 @@ end;
 
 
 
+{================= Handle command line options ========================}
+
+Function FindOption(lookup : string) : boolean;
+var cnt : byte;
+    s   : string;
+begin
+ FindOption := false;
+ for cnt := 1 to paramcount do
+ begin
+  if length(paramstr(cnt)) > length(lookup) then
+  s := copy(uppercase(paramstr(cnt)),1,length(lookup))
+  else
+  s := uppercase(paramstr(cnt));
+
+  if s = uppercase(lookup) then
+  begin
+   FindOption := true;
+   break;
+  end;
+
+ end;
+end;
 
 
 
 
 begin
+   if FindOption('AUX1') or FindOption('AUX2') or FindOption('DAC')  then
+    VOLUMECMD := true;
 
-   if (paramstr(1) = '/?') or (paramstr(1) = '?') then
+    keyboardmode := FindOption('/K');
+    nodetect     := FindOption('/NODETECT');
+
+
+   if (paramcount > 0) and
+      (volumecmd = false) and
+      (keyboardmode = false) and
+      (nodetect = false) then
    begin
      writeln('');
-     writeln(' Command line parameters for the Mixer: ');
-     writeln(' /K - Force keyboard control ');
-     writeln(' /? - This little help screen');
+     writeln(' '+title);
+     writeln(' Possible commandline parameters for the Mixer: ');
      writeln('');
-     writeln(' The desired volume can be set via command line:');
+     writeln(' /K           - Force keyboard control ');
+     writeln(' /NODETECT    - Skips hardware detection');
+     writeln('');
+     writeln(' The desired volume can also be set from the command line:');
+     writeln('');
      writeln(' Mixer.exe <Device> <Left volume (%)> <Right volume (%)>');
      writeln(' Supported values for <Device> are AUX1, AUX2 and DAC');
      writeln('');
@@ -625,9 +706,11 @@ begin
    end;
 
 
- writeln('');
- if paramcount <> 3 then write(' Reading configuration... ');
-
+ if volumecmd = false then
+ begin
+  writeln('');
+  write(' Reading configuration... ');
+ end;
 
  if not loadsettings then
  begin
@@ -636,71 +719,73 @@ begin
   writeln('');
   halt(1);
  end;
- writeln('OK');
 
+   {Init some variables for codec access}
+   CODEC.WSSPort := cfg.WSSBase;
+   CODEC.ADDR    := cfg.WSSBase+4;
+   CODEC.DATA    := cfg.WSSBase+5;
+   CODEC.STATUS  := cfg.WSSBase+6;
+   CODEC.PIO     := cfg.WSSBase+7;
 
- if paramcount <> 3 then write(' Checking hardware....');
+   {..and for MPU access}
+   COMDPORT := cfg.mpubase+1;
+   STATPORT := cfg.mpubase+1;
+   DATAPORT := cfg.mpubase;
 
- if not Detect929 then
+ if volumecmd = false then writeln('OK');
+
+ if nodetect = false then
  begin
-  writeln('');
-  writeln(' No OPTi 82C929 Soundcontroller found! ');
-  writeln('');
-  halt(1);
- end;
+   if (volumecmd = false) then write(' Checking hardware....');
 
- {Init some variables for codec access}
- CODEC.WSSPort := cfg.WSSBase;
- CODEC.ADDR    := cfg.WSSBase+4;
- CODEC.DATA    := cfg.WSSBase+5;
- CODEC.STATUS  := cfg.WSSBase+6;
- CODEC.PIO     := cfg.WSSBase+7;
- dacplaying := false;
- fmplaying := false;
+   if not Detect929 then
+   begin
+    writeln('');
+    writeln(' No OPTi 82C929 Soundcontroller found! ');
+    writeln('');
+    halt(1);
+   end;
 
- if not DetectAD1848 then
- begin
-  writeln('');
-  writeln(' No supported Codec found on soundcard! ');
-  writeln(' Run SETUP to check the configuration. ');
-  writeln('');
-  halt(1);
- end;
 
- if SBMode then                        {Opti929 is in SB mode}
- begin
-   if not DSP_Reset(cfg.SBBase) then   {Try to reset the DSP}
+   if not DetectAD1848 then
    begin
      writeln('');
-     writeln(' Sound Blaster initialisation failed!');
+     writeln(' No supported Codec found! ');
      writeln(' Run SETUP to check the configuration. ');
      writeln('');
      halt(1);
    end;
-   SB_resetMixer;       {Reset mixer}
-   SBM := true;        {Save that we started in SB mode to restore it later}
- end;
 
- if cfg.opl = 3 then
- begin
-   if not detectOPL3 then
+   if SBMode then                        {Opti929 is in SB mode}
    begin
+     if not DSP_Reset(cfg.SBBase) then   {Try to reset the DSP}
+     begin
+       writeln('');
+       writeln(' Sound Blaster initialization failed!');
+       writeln(' Run SETUP to check the configuration. ');
+       writeln('');
+       halt(1);
+    end;
+    SB_resetMixer;       {Reset mixer}
+    SBM := true;        {Save that we started in SB mode to restore it later}
+  end;
+
+  if (detectOPL2 = false) and (detectOPL3 = false) and (OPL4_detect = false) then
+  begin
      writeln('');
-     writeln(' No Yamaha YMF262 (OPL3) compatible FM-Chip found!');
+     writeln(' No compatible Yamaha FM synthesis chip found!');
      writeln('');
      halt(1);
-   end;
-   InitOPL;
-   ClearOPL;
- end;
+  end;
 
+  InitOPL;
+  ClearOPL;
 
+ if not volumecmd then
+ begin
 
  if cfg.mpu401 = 1 then
  begin
-   COMDPORT := cfg.mpubase+1;
-   STATPORT := cfg.mpubase+1;
-   DATAPORT := cfg.mpubase;
    ResetMPU(0);                          {First try to reset MPU to default (intelligent) mode}
    if not ResetMPU(1) then               {Then try to set it to UART}
    begin
@@ -712,27 +797,22 @@ begin
    end;
  end;
 
- if paramcount <> 3 then
+ if (mouse_there = false) or (mouse_init = false) or (uppercase(paramstr(1)) = '/K') then
  begin
-
-   if (mouse_there = false) or (mouse_init = false) or (uppercase(paramstr(1)) = '/K') then
-   begin
-     keyboardmode := true;
-     mouse_there := false;
-   end
-   else
-   begin
-     keyboardmode := false;
-   end;
-
-
-  writeln('OK');
+   keyboardmode := true;
+   mouse_there := false;
  end
  else
  begin
-  writeln('');
-  s := paramstr(1);
-  for z := 1 to length(s) do s[z] := upcase(s[z]);
+   keyboardmode := false;
+ end;
+ writeln('OK');
+ end;
+end;
+
+ if volumecmd = true then
+ begin
+  s := uppercase(paramstr(1));
 
   if (s = 'DAC') or (s = 'AUX1') or (s = 'AUX2') then
   begin
@@ -741,13 +821,13 @@ begin
 
     if (c1 <> 0) or (c2 <> 0) or (vl > 100) or (vr > 100) then
     begin
-     writeln('Invalid value for volume! Valid volumes are 0 to 100.');
+     writeln('Invalid value for volume! ');
      writeln('');
      halt(1);
     end;
     vl := round(vl*0.3);
     vr := round(vr*0.3);
-
+    protect_shadowregs(false);
     EnterWSSMode;                  {switch controller to WSS mode for full codec access}
 
     if s = 'DAC'  then
@@ -767,9 +847,39 @@ begin
      AD1848_SetVolume(AUX2,Left,vl);
      AD1848_SetVolume(AUX2,Right,vr);
     end;
+    if sbm then
+    begin
+      Prepare_AD1848_for_SB;
+      WaitForCodec;  {Wait for the codec to be ready}
+      SetSBMode(cfg); {Set OPTi Controller to SB Mode}
+      DSP_Reset(sb.base);   {Reset sound blaster dsp}
+      SB_ResetMixer;
+ (*     if s = 'DAC' then
+      begin
+        SB_Setvolume(DAC,left,round((vl / 2)));  {Set volumes in again in SB Mixer}
+        SB_Setvolume(DAC,right,round((vr / 2))); {Just to be save...}
+      end;
+      if s = 'AUX1' then
+      begin
+       SB_Setvolume(CD,left,round((vl / 2)));
+       SB_Setvolume(CD,right,round((vr / 2)));
+      end;
+      if s = 'AUX2' then
+      begin
+       SB_Setvolume(FM,left,round((vl / 2)));
+       SB_Setvolume(FM,right,round((vr / 2)));
+      end;*)
 
-    if sbm then EnterSBMode;
-    halt(0);
+      case sbfreq.chan of
+       0: SB_SetOutput(false,boolean(filter));  {Set Mono output}
+       1: SB_SetOutput(true,boolean(filter));   {Set Stereo output}
+      end;
+
+      If cfg.sbmix = 0 then SBMixer(false);    end;
+      protect_shadowregs(boolean(cfg.shprotect));
+      writeln(' '+s+' volume set to '+addzero(round((vl/30)*100))+'% for the left channel and '+
+            addzero(round((vr/30)*100))+'% for the right channel.');
+      halt(0);
   end
   else
   begin
@@ -791,7 +901,7 @@ end;
  randomize;
 
  EnterWSSMode;
-
+ protect_shadowregs(false);
 
  InitMenuScreen(title);
  if not keyboardmode then
@@ -806,15 +916,24 @@ end;
 
  window(4,3,57,23,textcol,background,true);
  fastwrite(23,3,headings,background,'Actual volumes:');
+
  fastwrite(8, 5,headings,background,'DAC Output');
- fastwrite(10, 7,textcol,background,'Left:   ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ');
- fastwrite(10, 8,textcol,background,'Right:  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ');
+ fastwrite(10, 7,textcol,background,'Left:');
+ for z := 0 to 30 do fastwrite(18+z, 7,textcol,background,#196);
+ fastwrite(10, 8,textcol,background,'Right:');
+ for z := 0 to 30 do fastwrite(18+z, 8,textcol,background,#196);
+
  fastwrite(8,11,headings,background,'Auxiliary 1 (CD and ext. Midi)  ');
- fastwrite(10,13,textcol,background,'Left:   ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ');
- fastwrite(10,14,textcol,background,'Right:  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ');
+ fastwrite(10,13,textcol,background,'Left:');
+ for z := 0 to 30 do fastwrite(18+z, 13,textcol,background,#196);
+ fastwrite(10,14,textcol,background,'Right:');
+ for z := 0 to 30 do fastwrite(18+z, 14,textcol,background,#196);
+
  fastwrite(8,17,headings,background,'Auxiliary 2 (FM and Wavetableheader) ');
- fastwrite(10,19,textcol,background,'Left:   ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ');
- fastwrite(10,20,textcol,background,'Right:  ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ');
+ fastwrite(10,19,textcol,background,'Left:');
+ for z := 0 to 30 do fastwrite(18+z, 19,textcol,background,#196);
+ fastwrite(10,20,textcol,background,'Right:');
+  for z := 0 to 30 do fastwrite(18+z, 20,textcol,background,#196);
 
 
  volumes.dacl  := AD1848_GetVolume(DAC,Left);
@@ -832,12 +951,12 @@ end;
  aux2l.x := volumes.aux2l+18;
  aux2r.x := volumes.aux2r+18;
 
- putchar(dacl.x,7,'Û',textcol,background);
- putchar(dacr.x,8,'Û',textcol,background);
- putchar(aux1l.x,13,'Û',textcol,background);
- putchar(aux1r.x,14,'Û',textcol,background);
- putchar(aux2l.x,19,'Û',textcol,background);
- putchar(aux2r.x,20,'Û',textcol,background);
+ putchar(dacl.x,7,#219,textcol,background);
+ putchar(dacr.x,8,#219,textcol,background);
+ putchar(aux1l.x,13,#219,textcol,background);
+ putchar(aux1r.x,14,#219,textcol,background);
+ putchar(aux2l.x,19,#219,textcol,background);
+ putchar(aux2r.x,20,#219,textcol,background);
 
 
 
@@ -883,13 +1002,13 @@ end;
 
  fastwrite(66,5,0,7,'FM Musik');
  if keyboardmode then putchar(66,5,'F',4,7);
- fastwrite(67,6,0,background, 'ßßßßßßßß');
- fastwrite(74,5,0,background, 'Ü');
+ fastwrite(67,6,0,background,#223+#223+#223+#223+#223+#223+#223+#223);
+ fastwrite(74,5,0,background,#220);
 
  fastwrite(66,7,0,7,'Sample');
  if keyboardmode then putchar(66,7,'S',4,7);
- fastwrite(67,8,0,background, 'ßßßßßß');
- fastwrite(72,7,0,background, 'Ü');
+ fastwrite(67,8,0,background,#223+#223+#223+#223+#223+#223);
+ fastwrite(72,7,0,background,#220);
 
  if cfg.mpu401 = 0 then
  begin
@@ -899,8 +1018,8 @@ end;
  begin
   fastwrite(66,9,0,7,'Wavetable');
   if keyboardmode then putchar(66,9,'W',4,7);
-  fastwrite(67,10,0,background, 'ßßßßßßßßß');
-  fastwrite(75,9,0,background, 'Ü');
+  fastwrite(67,10,0,background,#223+#223+#223+#223+#223+#223+#223+#223+#223);
+  fastwrite(75,9,0,background,#220);
  end;
 
  fmplaying := false;
@@ -919,13 +1038,7 @@ end;
    selectitem(select);
  end;
 
- while iskeypressed do getkey;
- (*
- assign(f,'MIX.SCR');
- rewrite(f,1);
- blockwrite(f,ptr(segB800,0)^,4000);
- close(f);
-   *)
+  while iskeypressed do getkey;
 
 repeat;
  if not keyboardmode then Mouse_Read;
@@ -934,13 +1047,16 @@ repeat;
  begin
     Playback(false);
     mutedac(leftandright,true);
-    Port[$0A] := $4 + cfg.wssdma;
-    Port[$0C] := 0; {Clear the internal DMA flip-flop}
+    WriteCODECReg($0E,0);        {Reset counter}
+    WriteCODECReg($0F,0);
+    writeCODECreg($0A,$00);   {disable interrupt and pin control}
+    Port[$20] := $20;
+
     mouse_hide;
     fastwrite(66,7,0,7,'Sample');
     if keyboardmode then putchar(66,7,'S',4,7);
-    fastwrite(67,8,0,background, 'ßßßßßß');
-    fastwrite(72,7,0,background, 'Ü');
+    fastwrite(67,8,0,background, #223+#223+#223+#223+#223+#223);
+    fastwrite(72,7,0,background, #220);
     mouse_show;
     dacplaying := false;
  end;
@@ -977,54 +1093,54 @@ begin
 
        7:
        begin
-        putchar(dacl.x,7,'Ä',textcol,background);
+        putchar(dacl.x,7,#196,textcol,background);
         dacl.x := xp;
-        putchar(dacl.x,7,'Û',textcol,background);
+        putchar(dacl.x,7,#219,textcol,background);
         volumes.dacl := xp - 18;
         AD1848_SetVolume(DAC,Left,volumes.dacl);
        end;
 
        8:
        begin
-        putchar(dacr.x,8,'Ä',textcol,background);
+        putchar(dacr.x,8,#196,textcol,background);
         dacr.x := xp;
-        putchar(dacr.x,8,'Û',textcol,background);
+        putchar(dacr.x,8,#219,textcol,background);
         volumes.dacr := xp - 18;
         AD1848_SetVolume(DAC,Right,volumes.dacr);
        end;
 
       13:
        begin
-        putchar(aux1l.x,13,'Ä',textcol,background);
+        putchar(aux1l.x,13,#196,textcol,background);
         aux1l.x := xp;
-        putchar(aux1l.x,13,'Û',textcol,background);
+        putchar(aux1l.x,13,#219,textcol,background);
         volumes.aux1l := xp - 18;
         AD1848_SetVolume(AUX1,Left,volumes.aux1l);
        end;
 
       14:
        begin
-        putchar(aux1r.x,14,'Ä',textcol,background);
+        putchar(aux1r.x,14,#196,textcol,background);
         aux1r.x := xp;
-        putchar(aux1r.x,14,'Û',textcol,background);
+        putchar(aux1r.x,14,#219,textcol,background);
         volumes.aux1r := xp - 18;
         AD1848_SetVolume(AUX1,Right,volumes.aux1r);
        end;
 
       19:
        begin
-        putchar(aux2l.x,19,'Ä',textcol,background);
+        putchar(aux2l.x,19,#196,textcol,background);
         aux2l.x := xp;
-        putchar(aux2l.x,19,'Û',textcol,background);
+        putchar(aux2l.x,19,#219,textcol,background);
         volumes.aux2l := xp - 18;
         AD1848_SetVolume(AUX2,Left,volumes.aux2l);
        end;
 
       20:
        begin
-        putchar(aux2r.x,20,'Ä',textcol,background);
+        putchar(aux2r.x,20,#196,textcol,background);
         aux2r.x := xp;
-        putchar(aux2r.x,20,'Û',textcol,background);
+        putchar(aux2r.x,20,#219,textcol,background);
         volumes.aux2r := xp - 18;
         AD1848_SetVolume(AUX2,Right,volumes.aux2r);
        end;
@@ -1246,14 +1362,14 @@ end;
 
 
 until (key =  #27);
-
-
-  if dacplaying then
-  begin
-    Playback(false);
-    mutedac(leftandright,true);
-    dacplaying := false;
-  end;
+  Playback(false);
+  mutedac(leftandright,true);
+  Port[$0A] := $4 + cfg.WSSDMA;
+  Port[$0C] := 0; {Clear the internal DMA flip-flop}
+  writeCODECreg($0A,$00);   {disable interrupt and pin control}
+  WriteCODECReg($0E,0);        {Reset counter}
+  WriteCODECReg($0F,0);
+  port[$20] := $20;
 
   if fmplaying then
   begin
@@ -1295,5 +1411,6 @@ until (key =  #27);
   begin
     EnterSBMode;
   end;
+  protect_shadowregs(boolean(cfg.shprotect));
   writeln('');
 end.

@@ -1,9 +1,26 @@
 {*****************************************************************************
    Setup for my OPTi 82C929 Soundcard low level driver
 *****************************************************************************
-Version:    1.2
-Date   :    10.02.2019
+Version:    1.3
+Date   :    23.02.2019
 Author :    Jan Knipperts
+
+changes
+  v1.0 to 1.01: Keyboard control was added
+  v1.01 to 1.1:
+   - Bug fix: Program tries no more to load config when standard cfg was set
+   - Bug fix: MPU401 will no longer be tested when disabled
+  v1.1 to 1.2
+   - Set default values if controller detection failed
+   - Added OPL4 support
+   - Added second page of advanced options
+   - Renamed some options
+   - Some small bugfixes
+  v1.3
+   - Reorganisation of advanced options
+   - Added new commandline options
+   - Improved WSS DMA Test
+   - Fixed bug in autoexec.bat entry
 *****************************************************************************}
 
 
@@ -65,7 +82,7 @@ type
  end;
 
 const
- title          : string = 'OPTi 82C929 Configuration v1.2 (c) 2019 by Jan Knipperts';
+ title          : string = 'OPTi82C929 Configuration v1.3 (c) 2019 by Jan Knipperts';
  cfgfile        : string = 'SOUND.CFG';
  autoexec       : string = 'AUTOEXEC.BAT';
 
@@ -120,39 +137,38 @@ var
  yp,
  menu,
  mselect,
- aselect             : byte;
+ aselect        : byte;
  quit,
  mpuoff,
  cdoff,
- irqcalled           : boolean;
- p                   : pointer;
- key                 : char;
+ irqcalled      : boolean;
+ p              : pointer;
+ key            : char;
 
- WSStext             : WSSAdress;
- SBtext              : SBAdress;
- MPUtext             : MPUAdress;
- CDtext              : CDAdress;
+ WSStext        : WSSAdress;
+ SBtext         : SBAdress;
+ MPUtext        : MPUAdress;
+ CDtext         : CDAdress;
 
- cfg                 : OPTI929config;
+ f              : file;
+ cfg            : OPTI929config;
  SBFreq,
- WSSFreq             : Freqconfig;
- CodecVolumes        : Volumes;
- f                   : file;
+ WSSFreq        : Freqconfig;
+ filter         : byte;
+ CodecVolumes   : Volumes;
 
- ocnt,
- size,
- bpos,
- cpos                : word;
- s,
- newblaster,
- dir,
- initstr,
- backup              : string;
- found               : boolean;
- DirInfo             : SearchRec;
- Error               : word;
- keyboardmode        : boolean;
- apage               : byte;
+ ocnt,size,bpos,cpos  : word;
+ s,newblaster,dir,
+ initstr,backup       : string;
+ found                : boolean;
+ DirInfo              : SearchRec;
+ Error                : word;
+ keyboardmode,
+ setdefault,
+ skip,
+ noinit,
+ sb                   : boolean;
+ apage                : byte;
 
 
  Procedure DrawSelector(xp,yp : byte; s : string);
@@ -191,6 +207,7 @@ var
  end;
 
 
+
  Procedure UnSelectItem(sel : byte);
  var x,y,l : byte;
  begin
@@ -199,6 +216,7 @@ var
 
     if menu = 1 then
     begin
+
       case sel of
          1: begin y := 6;  x := 21; l := 9; end;
          2: begin y := 7;  x := 21; l := 9; end;
@@ -229,47 +247,49 @@ var
     if apage = 0 then
     begin
      case sel of
-         1: begin y := 6;  x := 44; l := 9; end;
-         2: begin y := 7;  x := 44; l := 9; end;
-         3: begin y := 8;  x := 44; l := 9; end;
-         4: begin y := 9;  x := 44; l := 9; end;
-         5: begin y := 9;  x := 55; l := 9; end;
-         6: begin y := 9;  x := 66; l := 9; end;
-         7: begin y := 10;  x := 44; l := 9; end;
-         8: begin y := 10;  x := 55; l := 9; end;
-         9: begin y := 10;  x := 66; l := 9; end;
-         10: begin y := 11;  x := 44; l := 9; end;
-         11: begin y := 12;  x := 44; l := 9; end;
-         12: begin y := 13;  x := 44; l := 9; end;
-         13: begin y := 14;  x := 44; l := 9; end;
-         14: begin y := 15;  x := 44; l := 9; end;
-         15: begin y := 16;  x := 44; l := 9; end;
-         16: begin y := 17;  x := 44; l := 9; end;
-         17: begin y := 18;  x := 44; l := 9; end;
-         18: begin y := 19;  x := 44; l := 9; end;
-         19: begin y := 20;  x := 44; l := 9; end;
-         20: begin y := 22;  x := 9;  l := 6; end;
-         21: begin y := 22;  x := 44; l := 11; end;
+         1: begin y := 7;  x := 42; l := 9; end;
+         2: begin y := 8;  x := 42; l := 9; end;
+         3: begin y := 8;  x := 52; l := 9; end;
+         4: begin y := 8;  x := 63; l := 9; end;
+         5: begin y := 9;  x := 42; l := 9; end;
+         6: begin y := 9;  x := 52; l := 9; end;
+         7: begin y := 9;  x := 63; l := 9; end;
+         8: begin y := 10;  x := 42; l := 9; end;
+         9: begin y := 11;  x := 42; l := 9; end;
+         10: begin y := 12;  x := 42; l := 9; end;
+         11: begin y := 13;  x := 42; l := 9; end;
+         12: begin y := 14;  x := 42; l := 9; end;
+         13: begin y := 15;  x := 42; l := 9; end;
+         14: begin y := 16;  x := 42; l := 9; end;
+         15: begin y := 17;  x := 42; l := 9; end;
+         16: begin y := 18;  x := 42; l := 9; end;
+         17: begin y := 19;  x := 42; l := 9; end;
+         18: begin y := 22;  x := 9;  l := 6; end;
+         19: begin y := 22;  x := 44; l := 11; end;
       end;
        if y < 22 then unmark(x,y,l);
    end
    else
    begin
       case sel of
-         1: begin y := 6;  x := 44; l := 9; end;
-         2: begin y := 7;  x := 44; l := 9; end;
-         3: begin y := 8;  x := 44; l := 9; end;
-         4: begin y := 9;  x := 44; l := 9; end;
-         5: begin y := 10;  x := 44; l := 9; end;
-         6: begin y := 11;  x := 44; l := 9; end;
-         7: begin y := 22;  x := 9;  l := 6; end;
-         8: begin y := 22;  x := 44; l := 11; end;
+         1: begin y := 7;  x := 42; l := 9; end;
+         2: begin y := 8;  x := 42; l := 9; end;
+         3: begin y := 9;  x := 42; l := 9; end;
+         4: begin y := 10;  x := 42; l := 9; end;
+         5: begin y := 11;  x := 42; l := 9; end;
+         6: begin y := 12;  x := 42; l := 9; end;
+         7: begin y := 13;  x := 42; l := 9; end;
+         8: begin y := 14;  x := 42; l := 9; end;
+         9: begin y := 15;  x := 42; l := 9; end;
+         10: begin y := 22;  x := 9;  l := 6; end;
+         11: begin y := 22;  x := 44; l := 11; end;
       end;
       if y < 22 then unmark(x,y,l);
    end;
   end;
  end;
  end;
+
 
 
 
@@ -311,40 +331,41 @@ var
     if apage = 0 then
     begin
      case sel of
-         1: begin y := 6;  x := 44; l := 9; end;
-         2: begin y := 7;  x := 44; l := 9; end;
-         3: begin y := 8;  x := 44; l := 9; end;
-         4: begin y := 9;  x := 44; l := 9; end;
-         5: begin y := 9;  x := 55; l := 9; end;
-         6: begin y := 9;  x := 66; l := 9; end;
-         7: begin y := 10;  x := 44; l := 9; end;
-         8: begin y := 10;  x := 55; l := 9; end;
-         9: begin y := 10;  x := 66; l := 9; end;
-         10: begin y := 11;  x := 44; l := 9; end;
-         11: begin y := 12;  x := 44; l := 9; end;
-         12: begin y := 13;  x := 44; l := 9; end;
-         13: begin y := 14;  x := 44; l := 9; end;
-         14: begin y := 15;  x := 44; l := 9; end;
-         15: begin y := 16;  x := 44; l := 9; end;
-         16: begin y := 17;  x := 44; l := 9; end;
-         17: begin y := 18;  x := 44; l := 9; end;
-         18: begin y := 19;  x := 44; l := 9; end;
-         19: begin y := 20;  x := 44; l := 9; end;
-         20: begin y := 22;  x := 9;  l := 6; end;
-         21: begin y := 22;  x := 44; l := 11; end;
+         1: begin y := 7;  x := 42; l := 9; end;
+         2: begin y := 8;  x := 42; l := 9; end;
+         3: begin y := 8;  x := 52; l := 9; end;
+         4: begin y := 8;  x := 63; l := 9; end;
+         5: begin y := 9;  x := 42; l := 9; end;
+         6: begin y := 9;  x := 52; l := 9; end;
+         7: begin y := 9;  x := 63; l := 9; end;
+         8: begin y := 10;  x := 42; l := 9; end;
+         9: begin y := 11;  x := 42; l := 9; end;
+         10: begin y := 12;  x := 42; l := 9; end;
+         11: begin y := 13;  x := 42; l := 9; end;
+         12: begin y := 14;  x := 42; l := 9; end;
+         13: begin y := 15;  x := 42; l := 9; end;
+         14: begin y := 16;  x := 42; l := 9; end;
+         15: begin y := 17;  x := 42; l := 9; end;
+         16: begin y := 18;  x := 42; l := 9; end;
+         17: begin y := 19;  x := 42; l := 9; end;
+         18: begin y := 22;  x := 9;  l := 6; end;
+         19: begin y := 22;  x := 44; l := 11; end;
       end;
    end
    else
    begin
       case sel of
-         1: begin y := 6;  x := 44; l := 9; end;
-         2: begin y := 7;  x := 44; l := 9; end;
-         3: begin y := 8;  x := 44; l := 9; end;
-         4: begin y := 9;  x := 44; l := 9; end;
-         5: begin y := 10;  x := 44; l := 9; end;
-         6: begin y := 11;  x := 44; l := 9; end;
-         7: begin y := 22;  x := 9;  l := 6; end;
-         8: begin y := 22;  x := 44; l := 11; end;
+         1: begin y := 7;  x := 42; l := 9; end;
+         2: begin y := 8;  x := 42; l := 9; end;
+         3: begin y := 9;  x := 42; l := 9; end;
+         4: begin y := 10;  x := 42; l := 9; end;
+         5: begin y := 11;  x := 42; l := 9; end;
+         6: begin y := 12;  x := 42; l := 9; end;
+         7: begin y := 13;  x := 42; l := 9; end;
+         8: begin y := 14;  x := 42; l := 9; end;
+         9: begin y := 15;  x := 42; l := 9; end;
+         10: begin y := 22;  x := 9;  l := 6; end;
+         11: begin y := 22;  x := 44; l := 11; end;
       end;
    end;
   end;
@@ -354,7 +375,8 @@ var
 end;
 
 
-Procedure HLine(y : byte);
+
+ Procedure HLine(y : byte);
  begin
   putchar(4,y,#199,15,1);
   for cnt := 5 to 77 do
@@ -362,7 +384,7 @@ Procedure HLine(y : byte);
   putchar(77,y,#182,15,1);
  end;
 
-Procedure Button(x,y : byte; name : string; pressed : boolean);
+ Procedure Button(x,y : byte; name : string; pressed : boolean);
  var col,c : byte;
  begin
   if pressed then col := 1 else col := 0;
@@ -370,8 +392,8 @@ Procedure Button(x,y : byte; name : string; pressed : boolean);
   c := 1;
   while (name[c] = ' ') and (c <= length(name)) do inc(c);
   putchar(x+(c-1),y,name[c],4,7);
-  for c := x+1 to x+length(name) do fastwrite(c,y+1,col,1, '√ü');
-  fastwrite(x+length(name),y,col,1, '√ú');
+  for c := x+1 to x+length(name) do fastwrite(c,y+1,col,1, 'ﬂ');
+  fastwrite(x+length(name),y,col,1, '‹');
  end;
 
  Procedure Wait_for_Mousebutton;
@@ -470,45 +492,53 @@ Procedure Button(x,y : byte; name : string; pressed : boolean);
 
  end;
 
-Procedure SetStandardcfg;
+Procedure SetDefaultcfg;
 begin
  with cfg do
  begin
-  initmode    := 0;   {Set SB or WSS mode?}
-  powerdwn    := 0;   {Enable/Disable Powerdown mode}
-  silence     := 0;   {Enable/Disable silence mode}
-  Cfix        := 0;   {We assume an Analog Devices codec}
-  shprotect   := 0;   {Shadow Register protection off}
+  initmode    := 0;   {SB mode enabled}
+  powerdwn    := 0;   {Powerdown mode disabled}
+  silence     := 0;   {Mute off}
+  Cfix        := 1;   {We assume a Crystal codec}
+  shprotect   := 1;   {Shadow Register protection on}
   access      := 0;   {No access to codec in SB Mode}
   wave        := 1;
+  filter      := 1;
 
-  CDTYPE      := $FF;  {FF = disable CD-ROM }
-  CDBASE      := $340; {Port for CD-ROM}
+  CDTYPE      := $FF; {CD-ROM off}
+  CDBASE      := $340; {CD-ROM I/O Port}
   CDIRQ       := $FF; {IRQ for CD-ROM}
-  CDDMA       := 3;   {DMA channel for CD-ROM}
+  CDDMA       := 3;   {DMA for CD-ROM}
 
   SBBASE      := $220;   {SB Port}
   SBIRQ       := 5;   {SB IRQ}
   SBDMA       := 1;   {SB DMA}
   SBVER       := 3;   {SB Version}
-  FMAP        := 0;   {Simple SB Frequencymapping}
-  FIFO        := 0;   {Disable command FiFo in SB Mode}
+  FMAP        := 0;   {Use both crystals for SB Frequencymapping}
+  FIFO        := 1;   {Command FiFo in SB Mode on}
   SBMIX       := 1;   {Enable Sound Blaser Mixer chip emulation}
-  AUTOVOL     := 0;   {Disabel Automatic volume control}
-  ADPCM       := 1;   {Enable ADPCM support}
-  TIMEOUT     := 1;   {Enable timeout acknowledge
+  AUTOVOL     := 0;   {Disable Automatic volume control}
+  ADPCM       := 1;   {Enable ADPCM}
+  TIMEOUT     := 1;   {Enable Timeout ackonwledge}
   DMAWD       := 0;   {Disable DMA watch dog}
-  ATTN        := 1;   {Enable Attenuation }
-
+  ATTN        := 1;   {Enable attunation}
   WSSBase     := $530; {WSS Port}
-  WSSDMA      := 1;    {WSS DMA channel 1}
-  WSSIRQ      := $FF;  {Auto IRQ selection for WSS}
-
+  WSSDMA      := 1;    {WSS playback DMA 1}
+  WSSIRQ      := $FF;  {WSS Auto IRQ}
   GPEN        := 1;   {GamePort enabled}
-  GPMODE      := 1;   {Select internal Game Port Timer}
-  OUTMX       := 0;   {.. and timing mode OPL3SCn}
-  GPOUT       := 0;   {General Purpose outputs disabled}
-  OPL         := 3;   {OPL 3 FM}
+  GPMODE      := 1;   {Game Port Timer.  0 fÅr Extern, 1 fÅr Intern}
+  OUTMX       := 0;   {Timing mode OPL3SCn}
+  GPOUT       := 0;   {General purpose output disabled}
+
+  if OPL4_detect then
+  begin
+    OPL    := 4;   {OPL 4 FM}
+  end
+  else
+  begin
+    OPL    := 3;
+  end;
+
   FMCLK       := 3;   {OPL 3 clock}
 
   MPU401      := 1;   {MPU-401 enabled}
@@ -517,6 +547,8 @@ begin
  end;
 
  fillchar(codecvolumes,sizeof(codecvolumes),15); {middle all volumes}
+ codecvolumes.dacl := 30;
+ codecvolumes.dacr := 30;
  codecvolumes.inp := Postmx;  {Post mix input}
  codecvolumes.micgain := 0; {disable +20 db mic gain}
  codecvolumes.gain := 0; {set gain to 0, mute input}
@@ -541,7 +573,8 @@ begin
   assign(f,cfgfile);
   reset(f,1);
 
-   if filesize(f) <> (sizeof(cfg)+(2*sizeof(freqconfig))+sizeof(volumes)) then
+   if filesize(f) <>
+      (sizeof(cfg)+(2*sizeof(freqconfig))+sizeof(volumes)+1) then
    begin
      writeln('ERROR!');
      writeln('');
@@ -550,7 +583,7 @@ begin
      writeln('');
      writeln('Press any key to continue....');
      waitkey;
-     setstandardcfg;
+     setDefaultcfg;
      close(f);
    end
    else
@@ -559,6 +592,7 @@ begin
      blockread(f,cfg,sizeof(cfg));
      blockread(f,sbfreq,sizeof(freqconfig));
      blockread(f,wssfreq,sizeof(freqconfig));
+     blockread(f,filter,sizeof(filter));
      blockread(f,codecvolumes,sizeof(codecvolumes));
 
      if IOResult <> 0 then
@@ -570,7 +604,7 @@ begin
        writeln('');
        writeln('Press any key to continue....');
        waitkey;
-       setstandardcfg;
+       setDefaultcfg;
      end;
 
      close(f);
@@ -604,6 +638,7 @@ begin
      blockwrite(f,cfg,sizeof(cfg));
      blockwrite(f,sbfreq,sizeof(freqconfig));
      blockwrite(f,wssfreq,sizeof(freqconfig));
+     blockwrite(f,filter,sizeof(filter));
      blockwrite(f,codecvolumes,sizeof(codecvolumes));
     {$I+}
 
@@ -647,9 +682,9 @@ begin
 
  InitMenuScreen(title);
  Window(4,3,77,23,15,1,true);
- putchar(40,3,'√ë',15,1);
+ putchar(40,3,'—',15,1);
  for cnt := 4 to 19 do
- putchar(40,cnt,'¬≥',15,1);
+ putchar(40,cnt,'≥',15,1);
 
  fastwrite(9,4,14,1,'Sound Blaster configuration');
  fastwrite(9,6,15,1,'Address:');
@@ -676,7 +711,7 @@ begin
  Drawselector(58,8,WSS_DMA[wsstext.dma]);
 
  HLine(12);
- putchar(40,12,'√Ö',15,1);
+ putchar(40,12,'≈',15,1);
 
  fastwrite(9,13,14,1,'MPU401 configuration');
  fastwrite(9,15,15,1,'Enable MPU401 [ ]');
@@ -715,8 +750,8 @@ begin
 
 
  HLine(20);
- putchar(40,20,'√Ö',15,1);
- putchar(40,20,'√Å',15,1);
+ putchar(40,20,'≈',15,1);
+ putchar(40,20,'¡',15,1);
  Button(13,21,'Advanced Options',false);
  Button(34,21,'Test Settings',false);
  Button(52,21,'Save and quit',false);
@@ -747,28 +782,25 @@ begin
 
   if apage = 0 then
   begin
-    fastwrite(9,6,15,1,'Codec selection:');
-    fastwrite(9,7,15,1,'Yamaha Synthesis Chip selection: ');
-    fastwrite(9,8,15,1,'FM Timer Mode: ');
-    fastwrite(9,9,15,1,'Frequency for WSS mode:');
-    fastwrite(9,10,15,1,'Frequency for SB mode:');
-    fastwrite(9,11,15,1,'Crystals used for SB frequencies:');
-    fastwrite(9,12,15,1,'Sound Blaster DSP Version:');
-    fastwrite(9,13,15,1,'Automatic Volume Control:');
-    fastwrite(9,14,15,1,'Sound Blaster ADPCM support:');
-    fastwrite(9,15,15,1,'Command FIFO in Sound Blaster mode: ');
-    fastwrite(9,16,15,1,'Game Port Timer Mode:');
-    fastwrite(9,17,15,1,'Internal GP Timer Mode:');
-    fastwrite(9,18,15,1,'General Purpose Outputs:');
-    fastwrite(9,19,15,1,'SB mixer voice volume emulation:');
-    fastwrite(9,20,15,1,'Writeprotect shadow registers:');
+    fastwrite(7,7,15,1,'Codec selection:');
+    fastwrite(7,8,15,1,'Frequency for WSS mode:');
+    fastwrite(7,9,15,1,'Frequency for SB mode:');
+    fastwrite(7,10,15,1,'Crystals used for SB frequencies:');
+    fastwrite(7,11,15,1,'Writeprotect shadow registers:');
+    fastwrite(7,12,15,1,'Yamaha Synthesis Chip selection: ');
+    fastwrite(7,13,15,1,'Timing mode for FM Chip: ');
+    fastwrite(7,14,15,1,'Sound Blaster DSP Version:');
+    fastwrite(7,15,15,1,'Automatic Volume Control:');
+    fastwrite(7,16,15,1,'Sound Blaster ADPCM support:');
+    fastwrite(7,17,15,1,'Command FIFO in Sound Blaster mode: ');
+    fastwrite(7,18,15,1,'SB mixer voice volume emulation:');
+    fastwrite(7,19,15,1,'Allow access to codec in SB mode: ');
 
-    Drawselector(44,6,CFIX[cfg.cfix]);
-    Drawselector(44,7,FM_chip[cfg.opl]);
-    Drawselector(44,8,FM_CLK[cfg.fmclk]);
-    Drawselector(44,9,Frequency[WSSFreq.freq].rate);
-    Drawselector(55,9,Bits[WSSFreq.bits]);
-    Drawselector(66,9,MS[WSSFreq.chan]);
+
+    Drawselector(42,7,CFIX[cfg.cfix]);
+    Drawselector(42,8,Frequency[WSSFreq.freq].rate);
+    Drawselector(53,8,Bits[WSSFreq.bits]);
+    Drawselector(64,8,MS[WSSFreq.chan]);
 
     if (cfg.fmap = 1) and (Frequency[SBFreq.freq].xtal = 1) then
     begin
@@ -776,35 +808,42 @@ begin
         if SBfreq.freq = 0 then SBfreq.freq := 13 else dec(SBfreq.freq);
       until Frequency[SBFreq.freq].xtal = 2;
     end;
-
-    Drawselector(44,10,Frequency[SBFreq.freq].rate);
-    Drawselector(55,10,Bits[SBFreq.bits]);
-    Drawselector(66,10,MS[SBFreq.chan]);
-    Drawselector(44,11,FMAP[cfg.fmap]);
-    Drawselector(44,12,DSP[cfg.sbver]);
-    Drawselector(44,13,ONOFF[cfg.autovol]);
-    Drawselector(44,14,ONOFF[cfg.adpcm]);
-    Drawselector(44,15,ONOFF[cfg.fifo]);
-    Drawselector(44,16,GPMODE[cfg.gpmode]);
-    Drawselector(44,17,OUTMX[cfg.outmx]);
-    Drawselector(44,18,ONOFF[cfg.gpout]);
-    Drawselector(44,19,ONOFF[cfg.sbmix]);
-    Drawselector(44,20,ONOFF[cfg.shprotect]);
+    Drawselector(42,9,Frequency[SBFreq.freq].rate);
+    Drawselector(53,9,Bits[SBFreq.bits]);
+    Drawselector(64,9,MS[SBFreq.chan]);
+    Drawselector(42,10,FMAP[cfg.fmap]);
+    Drawselector(42,11,ONOFF[cfg.shprotect]);
+    Drawselector(42,12,FM_chip[cfg.opl]);
+    Drawselector(42,13,FM_CLK[cfg.fmclk]);
+    Drawselector(42,14,DSP[cfg.sbver]);
+    Drawselector(42,15,ONOFF[cfg.autovol]);
+    Drawselector(42,16,ONOFF[cfg.adpcm]);
+    Drawselector(42,17,ONOFF[cfg.fifo]);
+    Drawselector(42,18,ONOFF[cfg.sbmix]);
+    Drawselector(42,19,ONOFF[cfg.access]);
   end
   else
   begin
-    fastwrite(9,6,15,1,'Attenuation:');
-    fastwrite(9,7,15,1,'DMA watch dog: ');
-    fastwrite(9,8,15,1,'Use CDOE cmd:');
-    fastwrite(9,9,15,1,'Disable host access to FM,SB/WSS: ');
-    fastwrite(9,10,15,1,'Acknowledge chip timeout: ');
-    fastwrite(9,11,15,1,'Allow access to codec in SB mode: ');
-    Drawselector(44,6,ONOFF[cfg.attn]);
-    Drawselector(44,7,ONOFF[cfg.dmawd]);
-    Drawselector(44,8,ONOFF[cfg.wave]);
-    Drawselector(44,9,ONOFF[cfg.silence]);
-    Drawselector(44,10,ONOFF[cfg.timeout]);
-    Drawselector(44,11,ONOFF[cfg.access]);
+    fastwrite(7,7,15,1,'MC6:1 (reserved bit):');
+    fastwrite(7,8,15,1,'Disable access to FM and SB/WSS: ');
+    fastwrite(7,9,15,1,'Game Port Timer Mode:');
+    fastwrite(7,10,15,1,'Internal GP Timer Mode:');
+    fastwrite(7,11,15,1,'General Purpose Outputs:');
+    fastwrite(7,12,15,1,'Acknowledge chip timeout: ');
+    fastwrite(7,13,15,1,'MC6:0 (ATTN):');
+    fastwrite(7,14,15,1,'MC6:2 (DMA watch dog): ');
+    fastwrite(7,15,15,1,'Filter SB output: ');
+
+    Drawselector(42,7,ONOFF[cfg.wave]);
+    Drawselector(42,8,ONOFF[cfg.silence]);
+    Drawselector(42,9,GPMODE[cfg.gpmode]);
+    Drawselector(42,10,OUTMX[cfg.outmx]);
+    Drawselector(42,11,ONOFF[cfg.gpout]);
+    Drawselector(42,12,ONOFF[cfg.timeout]);
+    Drawselector(42,13,ONOFF[cfg.attn]);
+    Drawselector(42,14,ONOFF[cfg.dmawd]);
+    Drawselector(42,15,ONOFF[filter]);
+
   end;
 
 
@@ -845,6 +884,7 @@ Procedure Prepare_AD1848_for_SB;
 
         Calibrate_AD1848;  {Recalibrate codec o new samplerate}
         WaitForCodec;  {Wait for the codec to be ready again}
+
      asm
       sti
      end;
@@ -957,20 +997,19 @@ var
   Count : Word;
 
 begin
-  {Set the block length to 3}
-  WriteCODECReg($0E,3);
+asm
+ cli
+end;
+  MuteDAC(LeftANDRight,true);
+  Port[$0A] := $4 + cfg.WSSDMA;
+  Port[$0C] := 0; {Clear the internal DMA flip-flop}
+  port[$20] := 20;
+  Port[$0A] := cfg.wssDMA;
+  WriteCODECReg($0E,3);    {Set the block length to 3}
   WriteCODECReg($0F,0);
-
   Count := 0;
-
-  {Disable interrupts}
-  asm
-    cli
-  end;
-
   {Look at the current state of the DMA requests}
   Before := Port [8] and $E0;
-
   writeCODECreg($0A,$02);   {enable interrupt and pin control}
   Playback(true);           {start playback}
 
@@ -980,13 +1019,17 @@ begin
     inc (Count);
   until (Before <> After) or (Count > 60000);
 
-  {Reenable interrupts}
-  asm
-    sti
-  end;
-
-  {Reset DSP}
   Playback(false);
+  writeCODECreg($0A,$00);   {disable interrupt and pin control}
+  port[$20] := 20;
+  Port[$0A] := $4 + cfg.WSSDMA;
+  Port[$0C] := 0; {Clear the internal DMA flip-flop}
+  WriteCODECReg($0E,0);
+  WriteCODECReg($0F,0);
+  port[$20] := $20;
+  asm
+   sti
+  end;
 
   {Is there a change?}
   if Before <> After then
@@ -1007,7 +1050,6 @@ begin
 
   {No DMA???}
   TestWSSDMA := false;
-
 
 end;
 
@@ -1075,11 +1117,11 @@ var testdma : byte;
 begin
     mouse_hide;
     centeredtext(12,15,'Please wait...');
-      mouse_show;
-
+    mouse_show;
     Waitforcodec;
     Prepare_AD1848_for_SB;
     SetSBMode(cfg);
+
 
   if (DSP_Reset(cfg.sbbase) = false) or
      (hi(SB_GetDSPVersion) <> cfg.sbver) or
@@ -1094,6 +1136,8 @@ begin
     centeredtext(11,15,'Sound Blaster DSP '+DSP[cfg.sbver]+' at port '+hexw(cfg.sbbase)+'h - OK');
   end;
 
+  SB_ResetMixer;
+  SB_SetDataformat(PCM_8Bit);
 
   if cfg.sbdma <> $FF then
   begin
@@ -1151,21 +1195,16 @@ var c,testdma : byte;
 begin
   mouse_hide;
   centeredtext(7,15,'Please wait...');
-    mouse_show;
+  mouse_show;
+
   CODEC.WSSPort := cfg.WSSBase;
   CODEC.ADDR    := cfg.WSSBase+4;
   CODEC.DATA    := cfg.WSSBase+5;
   CODEC.STATUS  := cfg.WSSBase+6;
   CODEC.PIO     := cfg.WSSBase+7;
 
-
   SetWSSMode(cfg);
   Init_AD1848;
-  Waitforcodec;
-  MuteDAC(LeftAndRight,true);
-  MuteAUX1(LeftAndRight,true);
-  MuteAUX2(LeftAndRight,true);
-  Waitforcodec;
   Prepare_AD1848_for_WSS;
   Waitforcodec;
 
@@ -1189,7 +1228,6 @@ begin
     end
     else
     begin
-
       if testWSSdma = false then
       begin
        centeredtext(8,12,'Testing DMA transfer - FAILED!');
@@ -1198,7 +1236,6 @@ begin
       begin
         centeredtext(8,15,'Testing DMA transfer - OK');
       end;
-
     end;
   end;
 
@@ -1301,6 +1338,8 @@ begin
 
   TestWSS;
   TestSB;
+
+
 
   if cfg.mpu401 = 1 then
     TestMPU
@@ -1451,11 +1490,11 @@ begin
 
    if length(s) >= length(newblaster) then
    begin
-    for dummy := 1 to length(s) do       {Delete old entry}
+    for dummy := 1 to length(s) do       {Alten Eintrag lîschen}
     begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := 0;
     end;
-    for dummy := 1 to length(newblaster) do       {Insert the new string}
+    for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfÅgen}
     begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
     end;
@@ -1468,7 +1507,7 @@ begin
    else
    begin
      move(ptr(seg(p^),ofs(p^)+bpos+length(s))^,ptr(seg(p^),ofs(p^)+bpos+length(newblaster))^,size-(bpos+length(s)));
-     for dummy := 1 to length(newblaster) do       {Insert new string}
+     for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfÅgen}
      begin
       mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
      end;
@@ -1496,7 +1535,7 @@ begin
         ptr(seg(p^),ofs(p^)+(bpos+length(newblaster)))^,
         size-bpos);
 
-   for dummy := 1 to length(newblaster) do       {Insert new string}
+   for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfÅgen}
    begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
    end;
@@ -1505,16 +1544,35 @@ begin
    cpos := bpos;
 end;
 
-Procedure Find_INIT929;
+Procedure Update_INIT929;
+var dummy : byte;
 begin
  ocnt := 0;
  found := false;
  repeat;
+  bpos := ocnt;
   s := readcmd;
   s := Uppercase(s);
   if pos('929INIT.EXE',s) > 0 then
   begin
    found := true;
+   cpos := bpos;
+
+   if length(s) >= length(initstr) then
+   begin
+    for dummy := 1 to length(s) do       {Alten Eintrag lîschen}
+    begin
+     mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := 0;
+    end;
+    for dummy := 1 to length(initstr) do       {Neuen Eintrag einfÅgen}
+    begin
+     mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(initstr[dummy]);
+    end;
+    move(ptr(seg(p^),ofs(p^)+(bpos+length(s)))^,
+         ptr(seg(p^),ofs(p^)+(bpos+length(initstr)))^,
+         size-(bpos+length(s)));
+    size := size - (length(s)-length(initstr));
+   end;
   end;
  until ocnt >= size;
 end;
@@ -1527,7 +1585,7 @@ begin
         ptr(seg(p^),ofs(p^)+(cpos+length(initstr)))^,
         size-cpos);
 
-   for dummy := 1 to length(initstr) do       {Insert new string}
+   for dummy := 1 to length(initstr) do       {Neuen Eintrag einfÅgen}
    begin
      mem[seg(p^):ofs(p^)+cpos+(dummy-1)] := ord(initstr[dummy]);
    end;
@@ -1553,7 +1611,6 @@ end;
 
 Procedure Control_Mainmenu;
 begin
-
       {Handle keypresses}
 
     if keyboardmode then
@@ -1590,7 +1647,7 @@ begin
     end;
 
 
-      {Checkboxes}
+       {Checkboxes}
       if ((mouse.b = 1) and (((xp = 64) or (xp = 28)) and (yp = 11))) or
          ((keyboardmode = true) and ((mselect = 4) or (mselect = 8)) and ((key = #32) or (key = #13)))  then
       begin
@@ -2192,7 +2249,26 @@ begin
         Button(34,21,'Test Settings',true);
         mouse_show;
         Wait_for_Mousebutton;
-        TestSettings;
+        if not skip then TestSettings
+        else
+        begin
+          fillchar(p^,4000,0);
+          writeto(p);
+          InitMenuScreen(title);
+          Window(4,3,77,24,15,1,true);
+          centeredtext(4,14,'Test settings');
+          HLine(5);
+          centeredtext(13,14,'Tests cannot be performed.');
+          centeredtext(14,14,'Hardware detection is switched off!');
+          Button(39,22,' OK ',false);
+          mouse_hide;
+          ViewBuffer(p);
+          writeto(ptr(segB800,0));
+          mouse_show;
+          menu := 3;
+        end;
+
+
       end;
 
       {Quit}
@@ -2222,8 +2298,8 @@ begin
        unselectitem(aselect);
        if apage = 0 then
        begin
-         if aselect < 21 then inc(aselect);
-         if aselect > 19 then
+         if aselect < 19 then inc(aselect);
+         if aselect >= 18 then
          begin
           Button(9,22,' Next ',false);
           Button(44,22,' Main menu ',false);
@@ -2231,8 +2307,8 @@ begin
        end
        else
        begin
-         if aselect < 8 then inc(aselect);
-         if aselect > 6 then
+         if aselect < 11 then inc(aselect);
+         if aselect >= 10 then
          begin
           Button(9,22,' Back ',false);
           Button(44,22,' Main menu ',false);
@@ -2245,7 +2321,7 @@ begin
       begin
        if apage = 0 then
        begin
-        if aselect > 19 then
+        if aselect >= 18 then
         begin
          Button(9,22,' Next ',false);
          Button(44,22,' Main menu ',false);
@@ -2253,7 +2329,7 @@ begin
        end
        else
        begin
-        if aselect > 6 then
+        if aselect >= 10 then
         begin
          Button(9,22,' Back ',true);
          Button(44,22,' Main menu ',false);
@@ -2266,14 +2342,15 @@ begin
 
     end;
 
+
       {Handle Buttons:}
 
       {Back to main menu}
 
        if(((upcase(key) = 'M') and (sys_key = false)) or (key = #24) or (key = #27)) or
          ((mouse.b = 1) and ((xp >= 44) and (xp <= 55) and (yp = 22))) or
-         ((apage = 0) and (aselect = 21) and ((key = #32) or (key = #13)) or
-         ((apage = 1) and (aselect = 8) and ((key = #32) or (key = #13)))) then
+         ((apage = 0) and (aselect = 19) and ((key = #32) or (key = #13)) or
+         ((apage = 1) and (aselect = 11) and ((key = #32) or (key = #13)))) then
       begin
         mouse_hide;
         Button(44,22,' Main menu ',true);
@@ -2293,7 +2370,7 @@ begin
 
       if (((upcase(key) = 'N') and (sys_key = false)) or (key = #24) or (key = #27)) or
          ((mouse.b = 1) and ((xp >= 9) and (xp <= 15) and (yp = 22))) or
-         ((aselect = 20) and ((key = #32) or (key = #13))) then
+         ((aselect = 18) and ((key = #32) or (key = #13))) then
       begin
         mouse_hide;
         Button(9,22,' Next ',true);
@@ -2308,46 +2385,21 @@ begin
         mouse_show;
       end;
 
-      {Selectors}
 
-      if ((mouse.b = 1) and ((xp = 53 ) or (xp = 54)) and (yp = 6)) or
+      if ((mouse.b = 1) and ((xp = 51 ) or (xp = 52)) and (yp = 7)) or
          ((keyboardmode = true) and
          ((aselect = 1) and ((key = '+') or (key = #32) or (key = #13))))  then
       begin
         if cfg.cfix = 1 then cfg.cfix := 0 else cfg.cfix := 1;
         mouse_hide;
-        Drawselector(44,6,CFIX[cfg.cfix]);
+        Drawselector(42,7,CFIX[cfg.cfix]);
         mouse_show;
         Wait_for_Mousebutton;
       end;
 
-      if ((mouse.b = 1) and((xp = 53 ) or (xp = 54)) and (yp = 7)) or
+      if ((mouse.b = 1) and (xp = 51 ) and (yp = 8)) or
          ((keyboardmode = true) and
-         ((aselect = 2) and ((key = '+') or (key = '-') or
-                             (key = #32) or (key = #13))))  then
-      begin
-        if cfg.opl = 4 then cfg.opl := 3 else cfg.opl := 4;
-        mouse_hide;
-        Drawselector(44,7,FM_chip[cfg.opl]);
-        mouse_show;
-        Wait_for_Mousebutton;
-      end;
-
-      if ((mouse.b = 1) and((xp = 53 ) or (xp = 54)) and (yp = 8)) or
-         ((keyboardmode = true) and
-         ((aselect = 3) and ((key = '+') or (key = '-') or
-                             (key = #32) or (key = #13))))  then
-      begin
-        if cfg.fmclk = 3 then cfg.fmclk := 2 else cfg.fmclk := 3;
-         mouse_hide;
-        Drawselector(44,8,FM_CLK[cfg.fmclk]);
-          mouse_show;
-        Wait_for_Mousebutton;
-      end;
-
-      if ((mouse.b = 1) and(xp = 53 ) and (yp = 9)) or
-         ((keyboardmode = true) and
-         ((aselect = 4) and ((key = '+') or
+         ((aselect = 2) and ((key = '+') or
           (key = #32) or (key = #13)))) then
       begin
         if WSSFreq.freq < 13 then
@@ -2358,15 +2410,15 @@ begin
         begin
          WSSFreq.freq := 0;
         end;
-         mouse_hide;
-        Drawselector(44,9,Frequency[WSSFreq.freq].rate);
-          mouse_show;
+        mouse_hide;
+        Drawselector(42,8,Frequency[WSSFreq.freq].rate);
+        mouse_show;
         Wait_for_Mousebutton;
       end;
 
-      if ((mouse.b = 1) and(xp = 54 ) and (yp = 9)) or
+      if ((mouse.b = 1) and(xp = 52 ) and (yp = 8)) or
          ((keyboardmode = true) and
-         ((aselect = 4) and (key = '-'))) then
+         ((aselect = 2) and (key = '-'))) then
       begin
         if WSSFreq.freq > 0 then
         begin
@@ -2376,40 +2428,40 @@ begin
         begin
          WSSFreq.freq := 13;
         end;
-         mouse_hide;
-        Drawselector(44,9,Frequency[WSSFreq.freq].rate);
-         mouse_show;
+        mouse_hide;
+        Drawselector(42,8,Frequency[WSSFreq.freq].rate);
+        mouse_show;
         Wait_for_Mousebutton;
       end;
 
-      if ((mouse.b = 1) and((xp = 64 ) or (xp = 65)) and (yp = 9)) or
+      if ((mouse.b = 1) and ((xp = 62 ) or (xp = 63)) and (yp = 8)) or
          ((keyboardmode = true) and
-          ((aselect = 5) and ((key = '+') or (key = '-') or
+          ((aselect = 3) and ((key = '+') or (key = '-') or
            (key = #32) or (key = #13))))  then
       begin
         if WSSFreq.bits = 1 then WSSFreq.bits := 0 else WSSFreq.bits := 1;
-         mouse_hide;
-        Drawselector(55,9,Bits[WSSFreq.bits]);
-         mouse_show;
+        mouse_hide;
+        Drawselector(53,8,Bits[WSSFreq.bits]);
+        mouse_show;
         Wait_for_Mousebutton;
       end;
 
 
-      if ((mouse.b = 1) and((xp = 75 ) or (xp = 76)) and (yp = 9)) or
+      if ((mouse.b = 1) and((xp = 73 ) or (xp = 74)) and (yp = 8)) or
          ((keyboardmode = true) and
-           ((aselect = 6) and ((key = '+') or (key = '-') or
+           ((aselect = 4) and ((key = '+') or (key = '-') or
            (key = #32) or (key = #13))))  then
       begin
         if WSSFreq.chan = 1 then WSSFreq.chan := 0 else WSSFreq.chan := 1;
          mouse_hide;
-        Drawselector(66,9,MS[WSSFreq.chan]);
+         Drawselector(64,8,MS[WSSFreq.chan]);
          mouse_show;
         Wait_for_Mousebutton;
       end;
 
-      if ((mouse.b = 1) and(xp = 53 ) and (yp = 10)) or
+      if ((mouse.b = 1) and(xp = 51 ) and (yp = 9)) or
          ((keyboardmode = true) and
-         ((aselect = 7) and ((key = '+') or
+         ((aselect = 5) and ((key = '+') or
           (key = #32) or (key = #13)))) then
       begin
          if SBfreq.freq = 13 then SBfreq.freq := 0 else inc(SBfreq.freq);
@@ -2421,15 +2473,16 @@ begin
            until Frequency[SBFreq.freq].xtal = 2;
          end;
 
-         mouse_hide;
-        Drawselector(44,10,Frequency[SBFreq.freq].rate);
-         mouse_show;
+        mouse_hide;
+        Drawselector(42,9,Frequency[SBFreq.freq].rate);
+        mouse_show;
         Wait_for_Mousebutton;
       end;
 
-      if ((mouse.b = 1) and(xp = 54 ) and (yp = 10)) or
+
+      if ((mouse.b = 1) and (xp = 52 ) and (yp = 9)) or
          ((keyboardmode = true) and
-          ((aselect = 7) and (key = '-'))) then
+          ((aselect = 5) and (key = '-'))) then
       begin
         if SBFreq.freq = 0 then SBfreq.freq := 13 else dec(SBfreq.freq);
 
@@ -2440,64 +2493,102 @@ begin
           until Frequency[SBFreq.freq].xtal = 2;
         end;
 
-         mouse_hide;
-        Drawselector(44,10,Frequency[SBFreq.freq].rate);
-         mouse_show;
+        mouse_hide;
+        Drawselector(42,9,Frequency[SBFreq.freq].rate);
+        mouse_show;
         Wait_for_Mousebutton;
       end;
 
 
 
-      if ((mouse.b = 1) and((xp = 64 ) or (xp = 65)) and (yp = 10)) or
+      if ((mouse.b = 1) and((xp = 62 ) or (xp = 63)) and (yp = 9)) or
          ((keyboardmode = true) and
-          ((aselect = 8) and ((key = '+') or (key = '-') or
+          ((aselect = 6) and ((key = '+') or (key = '-') or
            (key = #32) or (key = #13))))  then
       begin
         if SBFreq.bits = 1 then SBFreq.bits := 0 else SBFreq.bits := 1;
-         mouse_hide;
-        Drawselector(55,10,Bits[SBFreq.bits]);
-         mouse_show;
+        mouse_hide;
+        Drawselector(53,9,Bits[SBFreq.bits]);
+        mouse_show;
         Wait_for_Mousebutton;
       end;
 
 
-      if ((mouse.b = 1) and((xp = 75) or (xp = 76)) and (yp = 10)) or
+      if ((mouse.b = 1) and((xp = 73) or (xp = 74)) and (yp = 9)) or
+         ((keyboardmode = true) and
+          ((aselect = 7) and ((key = '+') or (key = '-') or
+           (key = #32) or (key = #13))))  then
+      begin
+        if SBFreq.chan = 1 then SBFreq.chan := 0 else SBFreq.chan := 1;
+        mouse_hide;
+        Drawselector(64,9,MS[SBFreq.chan]);
+        mouse_show;
+        Wait_for_Mousebutton;
+      end;
+
+
+
+      if ((mouse.b = 1) and ((xp = 51 ) or (xp = 52)) and (yp = 10)) or
+         ((keyboardmode = true) and
+         ((aselect = 8) and ((key = '+') or (key = '-') or
+          (key = #32) or (key = #13))))  then
+      begin
+        if cfg.fmap = 1 then cfg.fmap := 0 else cfg.fmap := 1;
+        mouse_hide;
+        Drawselector(42,10,FMAP[cfg.fmap]);
+
+        if (cfg.fmap = 1) and (Frequency[SBFreq.freq].xtal = 1) then
+        begin
+          repeat;
+           if SBfreq.freq = 0 then SBfreq.freq := 13 else dec(SBfreq.freq);
+          until Frequency[SBFreq.freq].xtal = 2;
+          Drawselector(42,9,Frequency[SBFreq.freq].rate);
+        end;
+
+        mouse_show;
+        Wait_for_Mousebutton;
+      end;
+
+      if ((mouse.b = 1) and((xp = 51 ) or (xp = 52)) and (yp = 11)) or
          ((keyboardmode = true) and
           ((aselect = 9) and ((key = '+') or (key = '-') or
            (key = #32) or (key = #13))))  then
       begin
-        if SBFreq.chan = 1 then SBFreq.chan := 0 else SBFreq.chan := 1;
+         if cfg.shprotect = 1 then cfg.shprotect := 0 else cfg.shprotect := 1;
          mouse_hide;
-        Drawselector(66,10,MS[SBFreq.chan]);
+         Drawselector(42,11,ONOFF[cfg.shprotect]);
          mouse_show;
         Wait_for_Mousebutton;
       end;
 
-      if ((mouse.b = 1) and((xp = 53 ) or (xp = 54)) and (yp = 11)) or
+      if ((mouse.b = 1) and((xp = 51 ) or (xp = 52)) and (yp = 12)) or
          ((keyboardmode = true) and
          ((aselect = 10) and ((key = '+') or (key = '-') or
-           (key = #32) or (key = #13))))  then
-            begin
-        if cfg.fmap = 1 then cfg.fmap := 0 else cfg.fmap := 1;
-         mouse_hide;
-        Drawselector(44,11,FMAP[cfg.fmap]);
+                             (key = #32) or (key = #13))))  then
+      begin
+        if cfg.opl = 4 then cfg.opl := 3 else cfg.opl := 4;
+        mouse_hide;
+        Drawselector(42,12,FM_chip[cfg.opl]);
+        mouse_show;
+        Wait_for_Mousebutton;
+      end;
 
-        if (cfg.fmap = 1) and (Frequency[SBFreq.freq].xtal = 1) then
-        begin
-         repeat;
-          if SBfreq.freq = 0 then SBfreq.freq := 13 else dec(SBfreq.freq);
-         until Frequency[SBFreq.freq].xtal = 2;
-         Drawselector(44,10,Frequency[SBFreq.freq].rate);
-        end;
-
+      if ((mouse.b = 1) and((xp = 51 ) or (xp = 52)) and (yp = 13)) or
+         ((keyboardmode = true) and
+         ((aselect = 11) and ((key = '+') or (key = '-') or
+                             (key = #32) or (key = #13))))  then
+      begin
+        if cfg.fmclk = 3 then cfg.fmclk := 2 else cfg.fmclk := 3;
+        mouse_hide;
+        Drawselector(42,13,FM_CLK[cfg.fmclk]);
          mouse_show;
         Wait_for_Mousebutton;
       end;
 
 
-      if ((mouse.b = 1) and(xp = 53 ) and (yp = 12)) or
+      if ((mouse.b = 1) and(xp = 51 ) and (yp = 14)) or
          ((keyboardmode = true) and
-         ((aselect = 11) and ((key = '+') or
+         ((aselect = 12) and ((key = '+') or
          (key = #32) or (key = #13))))  then
       begin
         if cfg.sbver < 4 then
@@ -2508,15 +2599,15 @@ begin
         begin
          cfg.sbver := 1;
         end;
-         mouse_hide;
-        Drawselector(44,12,DSP[cfg.sbver]);
-         mouse_show;
+        mouse_hide;
+        Drawselector(42,14,DSP[cfg.sbver]);
+        mouse_show;
         Wait_for_Mousebutton;
       end;
 
-      if ((mouse.b = 1) and (xp = 54 ) and (yp = 12)) or
+      if ((mouse.b = 1) and (xp = 52 ) and (yp = 14)) or
          ((keyboardmode = true) and
-         ((aselect = 11) and (key = '-'))) then
+         ((aselect = 12) and (key = '-'))) then
       begin
         if cfg.sbver > 1 then
         begin
@@ -2526,108 +2617,74 @@ begin
         begin
          cfg.sbver := 4;
         end;
-         mouse_hide;
-        Drawselector(44,12,DSP[cfg.sbver]);
-         mouse_show;
-        Wait_for_Mousebutton;
-      end;
-
-
-      if ((mouse.b = 1) and((xp = 53 ) or (xp = 54)) and (yp = 13)) or
-         ((keyboardmode = true) and
-          ((aselect = 12) and ((key = '+') or (key = '-') or
-           (key = #32) or (key = #13))))  then
-      begin
-        if cfg.autovol = 1 then cfg.autovol := 0 else cfg.autovol := 1;
-         mouse_hide;
-         Drawselector(44,13,ONOFF[cfg.autovol]);
-         mouse_show;
-        Wait_for_Mousebutton;
-      end;
-
-      if ((mouse.b = 1) and((xp = 53 ) or (xp = 54)) and (yp = 14)) or
-         ((keyboardmode = true) and
-          ((aselect = 13) and ((key = '+') or (key = '-') or
-           (key = #32) or (key = #13))))  then
-      begin
-        if cfg.adpcm = 1 then cfg.adpcm := 0 else cfg.adpcm := 1;
         mouse_hide;
-        Drawselector(44,14,ONOFF[cfg.adpcm]);
+        Drawselector(42,14,DSP[cfg.sbver]);
         mouse_show;
         Wait_for_Mousebutton;
       end;
 
-      if ((mouse.b = 1) and((xp = 53 ) or (xp = 54)) and (yp = 15)) or
+
+      if ((mouse.b = 1) and((xp = 51 ) or (xp = 52)) and (yp = 15)) or
+         ((keyboardmode = true) and
+          ((aselect = 13) and ((key = '+') or (key = '-') or
+           (key = #32) or (key = #13))))  then
+      begin
+        if cfg.autovol = 1 then cfg.autovol := 0 else cfg.autovol := 1;
+         mouse_hide;
+         Drawselector(42,15,ONOFF[cfg.autovol]);
+         mouse_show;
+        Wait_for_Mousebutton;
+      end;
+
+      if ((mouse.b = 1) and((xp = 51 ) or (xp = 52)) and (yp = 16)) or
          ((keyboardmode = true) and
           ((aselect = 14) and ((key = '+') or (key = '-') or
            (key = #32) or (key = #13))))  then
       begin
-        if cfg.fifo = 1 then cfg.fifo := 0 else cfg.fifo := 1;
-         mouse_hide;
-        Drawselector(44,15,ONOFF[cfg.fifo]);
-         mouse_show;
+        if cfg.adpcm = 1 then cfg.adpcm := 0 else cfg.adpcm := 1;
+        mouse_hide;
+        Drawselector(42,16,ONOFF[cfg.adpcm]);
+        mouse_show;
         Wait_for_Mousebutton;
       end;
 
-      if ((mouse.b = 1) and(xp = 53 ) or (xp = 54)) and (yp = 16) or
+      if ((mouse.b = 1) and ((xp = 51 ) or (xp = 52)) and (yp = 17)) or
          ((keyboardmode = true) and
          ((aselect = 15) and ((key = '+') or (key = '-') or
           (key = #32) or (key = #13))))  then
       begin
-        if cfg.gpmode = 1 then cfg.gpmode := 0 else cfg.gpmode := 1;
-         mouse_hide;
-        Drawselector(44,16,GPMODE[cfg.gpmode]);
-         mouse_show;
+        if cfg.fifo = 1 then cfg.fifo := 0 else cfg.fifo := 1;
+        mouse_hide;
+        Drawselector(42,17,ONOFF[cfg.fifo]);
+        mouse_show;
         Wait_for_Mousebutton;
       end;
 
-      if ((mouse.b = 1) and((xp = 53 ) or (xp = 54)) and (yp = 17)) or
+     if ((mouse.b = 1) and ((xp = 51 ) or (xp = 52)) and (yp = 18)) or
          ((keyboardmode = true) and
           ((aselect = 16) and ((key = '+') or (key = '-') or
            (key = #32) or (key = #13))))  then
       begin
-        if cfg.outmx = 1 then cfg.outmx := 0 else cfg.outmx := 1;
-         mouse_hide;
-        Drawselector(44,17,OUTMX[cfg.outmx]);
-         mouse_show;
-        Wait_for_Mousebutton;
-      end;
-
-      if ((mouse.b = 1) and((xp = 53 ) or (xp = 54)) and (yp = 18)) or
-         ((keyboardmode = true) and
-          ( (aselect = 17) and ((key = '+') or (key = '-') or
-           (key = #32) or (key = #13))))  then
-      begin
-        if cfg.gpout = 1 then cfg.gpout := 0 else cfg.gpout := 1;
-         mouse_hide;
-        Drawselector(44,18,ONOFF[cfg.gpout]);
-         mouse_show;
-        Wait_for_Mousebutton;
-      end;
-
-     if ((mouse.b = 1) and((xp = 53 ) or (xp = 54)) and (yp = 19)) or
-         ((keyboardmode = true) and
-          ((aselect = 18) and ((key = '+') or (key = '-') or
-           (key = #32) or (key = #13))))  then
-      begin
          if cfg.sbmix = 1 then cfg.sbmix := 0 else cfg.sbmix := 1;
          mouse_hide;
-         Drawselector(44,19,ONOFF[cfg.sbmix]);
+         Drawselector(42,18,ONOFF[cfg.sbmix]);
          mouse_show;
+         Wait_for_Mousebutton;
+      end;
+
+
+     if ((mouse.b = 1) and ((xp = 51) or (xp = 52)) and (yp = 19)) or
+         ((keyboardmode = true) and
+          ((aselect = 17) and ((key = '+') or (key = '-') or
+           (key = #32) or (key = #13))))  then
+      begin
+        if cfg.access = 1 then cfg.access := 0 else cfg.access := 1;
+        mouse_hide;
+        Drawselector(42,19,ONOFF[cfg.access]);
+        mouse_show;
         Wait_for_Mousebutton;
       end;
 
-     if ((mouse.b = 1) and((xp = 53 ) or (xp = 54)) and (yp = 20)) or
-         ((keyboardmode = true) and
-          ((aselect = 19) and ((key = '+') or (key = '-') or
-           (key = #32) or (key = #13))))  then
-      begin
-         if cfg.shprotect = 1 then cfg.shprotect := 0 else cfg.shprotect := 1;
-         mouse_hide;
-         Drawselector(44,20,ONOFF[cfg.shprotect]);
-         mouse_show;
-        Wait_for_Mousebutton;
-      end;
 
      end
      else   {Page 1}
@@ -2635,7 +2692,7 @@ begin
 
       if ((upcase(key) = 'B') or (key = #24) or (key = #27)) or
          ((mouse.b = 1) and ((xp >= 9) and (xp <= 15) and (yp = 22))) or
-         ((aselect = 7) and ((key = #32) or (key = #13))) then
+         ((aselect = 10) and ((key = #32) or (key = #13))) then
       begin
         mouse_hide;
         Button(9,22,' Back ',true);
@@ -2650,77 +2707,118 @@ begin
         mouse_show;
       end;
 
-      if ((mouse.b = 1) and((xp = 53 ) or (xp = 54)) and (yp = 6)) or
+
+
+     if ((mouse.b = 1) and((xp = 51 ) or (xp = 52)) and (yp = 7)) or
          ((keyboardmode = true) and
-          ((aselect = 1) and ((key = '+') or (key = '-') or
-           (key = #32) or (key = #13))))  then
+         ((aselect = 1) and ((key = '+') or (key = '-') or
+          (key = #32) or (key = #13))))  then
       begin
-        if cfg.attn = 1 then cfg.attn := 0 else cfg.attn := 1;
-        mouse_hide;
-        Drawselector(44,6,ONOFF[cfg.attn]);
-        mouse_show;
-        Wait_for_Mousebutton;
+         if cfg.wave = 1 then cfg.wave := 0 else cfg.wave := 1;
+         mouse_hide;
+         Drawselector(42,7,ONOFF[cfg.wave]);
+         mouse_show;
+         Wait_for_Mousebutton;
       end;
 
-      if ((mouse.b = 1) and((xp = 53 ) or (xp = 54)) and (yp = 7)) or
+
+      if ((mouse.b = 1) and((xp = 51 ) or (xp = 52)) and (yp = 8)) or
          ((keyboardmode = true) and
           ((aselect = 2) and ((key = '+') or (key = '-') or
            (key = #32) or (key = #13))))  then
       begin
-        if cfg.dmawd = 1 then cfg.dmawd := 0 else cfg.dmawd := 1;
-         mouse_hide;
-         Drawselector(44,7,ONOFF[cfg.dmawd]);
-         mouse_show;
-         Wait_for_Mousebutton;
+        if cfg.silence = 1 then cfg.silence := 0 else cfg.silence := 1;
+        mouse_hide;
+        Drawselector(42,8,ONOFF[cfg.silence]);
+        mouse_show;
+        Wait_for_Mousebutton;
       end;
 
-       if ((mouse.b = 1) and((xp = 53 ) or (xp = 54)) and (yp = 8)) or
+     if ((mouse.b = 1) and(xp = 51 ) or (xp = 52)) and (yp = 9) or
          ((keyboardmode = true) and
-          ((aselect = 3) and ((key = '+') or (key = '-') or
-           (key = #32) or (key = #13))))  then
+         ((aselect = 3) and ((key = '+') or (key = '-') or
+          (key = #32) or (key = #13))))  then
       begin
-         if cfg.wave = 1 then cfg.wave := 0 else cfg.wave := 1;
-         mouse_hide;
-         Drawselector(44,8,ONOFF[cfg.wave]);
-         mouse_show;
-         Wait_for_Mousebutton;
+        if cfg.gpmode = 1 then cfg.gpmode := 0 else cfg.gpmode := 1;
+        mouse_hide;
+        Drawselector(42,9,GPMODE[cfg.gpmode]);
+        mouse_show;
+        Wait_for_Mousebutton;
       end;
 
-      if ((mouse.b = 1) and((xp = 53 ) or (xp = 54)) and (yp = 9)) or
+      if ((mouse.b = 1) and((xp = 51) or (xp = 52)) and (yp = 10)) or
          ((keyboardmode = true) and
           ((aselect = 4) and ((key = '+') or (key = '-') or
            (key = #32) or (key = #13))))  then
       begin
-         if cfg.silence = 1 then cfg.silence := 0 else cfg.silence := 1;
-         mouse_hide;
-         Drawselector(44,9,ONOFF[cfg.silence]);
-         mouse_show;
+        if cfg.outmx = 1 then cfg.outmx := 0 else cfg.outmx := 1;
+        mouse_hide;
+        Drawselector(42,10,OUTMX[cfg.outmx]);
+        mouse_show;
         Wait_for_Mousebutton;
       end;
 
-      if ((mouse.b = 1) and((xp = 53 ) or (xp = 54)) and (yp = 10)) or
+      if ((mouse.b = 1) and((xp = 51 ) or (xp = 52)) and (yp = 11)) or
          ((keyboardmode = true) and
-          ((aselect = 5) and ((key = '+') or (key = '-') or
+          ( (aselect = 5) and ((key = '+') or (key = '-') or
            (key = #32) or (key = #13))))  then
       begin
-        if cfg.timeout = 1 then cfg.timeout := 0 else cfg.timeout := 1;
+        if cfg.gpout = 1 then cfg.gpout := 0 else cfg.gpout := 1;
          mouse_hide;
-         Drawselector(44,10,ONOFF[cfg.timeout]);
+        Drawselector(42,11,ONOFF[cfg.gpout]);
          mouse_show;
         Wait_for_Mousebutton;
       end;
 
-       if ((mouse.b = 1) and((xp = 53 ) or (xp = 54)) and (yp = 11)) or
+      if ((mouse.b = 1) and((xp = 51 ) or (xp = 52)) and (yp = 12)) or
          ((keyboardmode = true) and
           ((aselect = 6) and ((key = '+') or (key = '-') or
            (key = #32) or (key = #13))))  then
       begin
-        if cfg.access = 1 then cfg.access := 0 else cfg.access := 1;
+        if cfg.timeout = 1 then cfg.timeout := 0 else cfg.timeout := 1;
          mouse_hide;
-         Drawselector(44,11,ONOFF[cfg.access]);
+         Drawselector(42,12,ONOFF[cfg.timeout]);
          mouse_show;
         Wait_for_Mousebutton;
       end;
+
+      if ((mouse.b = 1) and((xp = 51 ) or (xp = 52)) and (yp = 13)) or
+         ((keyboardmode = true) and
+          ((aselect = 7) and ((key = '+') or (key = '-') or
+           (key = #32) or (key = #13))))  then
+      begin
+        if cfg.attn = 1 then cfg.attn := 0 else cfg.attn := 1;
+        mouse_hide;
+        Drawselector(42,13,ONOFF[cfg.attn]);
+        mouse_show;
+        Wait_for_Mousebutton;
+      end;
+
+      if ((mouse.b = 1) and((xp = 51 ) or (xp = 52)) and (yp = 14)) or
+         ((keyboardmode = true) and
+          ((aselect = 8) and ((key = '+') or (key = '-') or
+           (key = #32) or (key = #13))))  then
+      begin
+        if cfg.dmawd = 1 then cfg.dmawd := 0 else cfg.dmawd := 1;
+         mouse_hide;
+         Drawselector(42,14,ONOFF[cfg.dmawd]);
+         mouse_show;
+         Wait_for_Mousebutton;
+      end;
+
+      if ((mouse.b = 1) and((xp = 51 ) or (xp = 52)) and (yp = 15)) or
+         ((keyboardmode = true) and
+          ((aselect = 9) and ((key = '+') or (key = '-') or
+           (key = #32) or (key = #13))))  then
+      begin
+        if filter = 1 then filter := 0 else filter := 1;
+         mouse_hide;
+         Drawselector(42,15,ONOFF[filter]);
+         mouse_show;
+         Wait_for_Mousebutton;
+      end;
+
+
 
    end;
 
@@ -2746,14 +2844,14 @@ begin
  end;
 
  initstr  := FExpand('')+'929INIT.EXE /INIT /Q'+#13+#10;
- newBlaster := 'SET BLASTER=A'+removezeros(hexw(cfg.sbbase))+
-                          ' I'+removezeros(hexb(cfg.sbirq))+
-                          ' D'+removezeros(hexb(cfg.sbdma));
+ newBlaster := 'SET BLASTER=A'+removezeros(hexw(cfg.sbbase));
 
+ if cfg.sbirq <> $FF then
+ newBlaster := newBlaster + ' I'+removezeros(hexb(cfg.sbirq));
+ if cfg.sbdma <> $FF then
+ newBlaster := newBlaster + ' D'+removezeros(hexb(cfg.sbdma));
  if cfg.mpu401 > 0 then
- begin
-   newblaster := newblaster + ' P'+ removezeros(hexw(cfg.mpubase));
- end;
+ newblaster := newblaster + ' P'+ removezeros(hexw(cfg.mpubase));
  case cfg.SBver of
    1: newblaster := newblaster + ' T1';
    2: newblaster := newblaster + ' T2';
@@ -2767,7 +2865,7 @@ begin
  begin
   Create_Blaster;
  end;
- Find_INIT929;
+ Update_INIT929;
  if not found then
  begin
   Create_INIT;
@@ -2823,7 +2921,7 @@ Procedure Reinit;
 begin
  writeln('');
  writeln('New settings are applied and the sound card is reinitialized.');
- DosShell('/C 929INIT.EXE /INIT /Q /N10');
+ DosShell('/C 929INIT.EXE /INIT /Q /N5');
  if error <> 0 then
  begin
    writeln('');
@@ -2833,6 +2931,29 @@ begin
  end;
 end;
 
+
+{================= Handle command line options ========================}
+
+Function FindOption(lookup : string) : boolean;
+var cnt : byte;
+    s   : string;
+begin
+ FindOption := false;
+ for cnt := 1 to paramcount do
+ begin
+  if length(paramstr(cnt)) > length(lookup) then
+  s := copy(uppercase(paramstr(cnt)),1,length(lookup))
+  else
+  s := uppercase(paramstr(cnt));
+
+  if s = uppercase(lookup) then
+  begin
+   FindOption := true;
+   break;
+  end;
+
+ end;
+end;
 
 
 
@@ -2849,6 +2970,33 @@ end;
 writeln(title);
 writeln('');
 
+skip := FindOption('/NODETECT');
+setdefault := FindOption('/RESET');
+noinit := FindOption('/NOINIT');
+keyboardmode := FindOption('/K');
+
+
+if (skip = false) and (setdefault = false) and (noinit = false) and
+   (keyboardmode = false) and (paramcount > 0) then
+begin
+  writeln('Possible command line options are: ');
+  writeln('');
+  writeln('/K            Enables the keyboard control of the program');
+  writeln('/RESET        Resets the configuration to the default settings');
+  writeln('/NODETECT     Suppresses hardware detection');
+  writeln('/NOINIT       Suppresses the reinitialization of the soundcard');
+  writeln('');
+  writeln('All options can be combined. Example: SETUP.EXE /K /NODETECT /NOINIT');
+  writeln('');
+  halt(0);
+end;
+
+
+
+
+if not skip then
+begin
+
 if not fileexist('929INIT.EXE') then
 begin
   writeln('File 929INIT.EXE not found!');
@@ -2858,20 +3006,15 @@ end;
 
 write('Checking hardware.... ');
 
+
 if not Detect929 then
 begin
-
- SetInitValues;  {Set default values and try again}
-
- if not Detect929 then
- begin
    writeln('');
    writeln('OPTi 82c929 sound controller chip not found!');
    writeln('');
    halt(1);
- end;
-
 end;
+
 
 if not DetectAD1848 then
 begin
@@ -2881,14 +3024,9 @@ begin
   halt(1);
 end;
 
-if (mouse_there = false) or (mouse_init = false) or (uppercase(paramstr(1)) = '/K') then
+if (mouse_there = false) or (mouse_init = false) or (Keyboardmode) then
 begin
- keyboardmode := true;
  mouse_there := false;
-end
-else
-begin
- keyboardmode := false;
 end;
 
 
@@ -2900,27 +3038,24 @@ begin
 end;
 
  writeln('OK');
+end;
 
-
- if not fileexist(cfgfile) then
+ if (setdefault = true) or
+  (fileexist(cfgfile) = false) then
  begin
-  writeln('');
-  writeln('Can''t find the configuration file!');
-  writeln('Creating a new file with default settings.');
-  writeln('');
-  writeln('Press any key to continue....');
-  waitkey;
-  setstandardcfg;
+   SetDefaultCfg;
  end
  else
  begin
-  LoadCfg;
+   LoadCfg;
  end;
 
+ MapCFGtoText;
  getmem(p,4000); {Alloc additional screen buffer}
 
  menu := 1;    {Main menu}
  mselect := 1;
+
  Draw_Main_Menu;
 
  mouse_show;
@@ -3088,16 +3223,16 @@ end;
    if ((xp >= 33) and (xp <= 37) and (yp = 13) and (mouse.b = 1) ) or
           (upcase(key) = 'Y') or ((aselect = 1) and (key = #13)) then
     begin
-       mouse_hide;
+      mouse_hide;
       Button(33,13,' Yes ',true);
-       mouse_show;
+      mouse_show;
       Wait_for_Mousebutton;
-       mouse_hide;
+      mouse_hide;
       clrscr;
       freemem(p,4000);
       SaveCfg;
       UpdateAutoexec;
-      Reinit;         {Execute init929.exe to apply new settings}
+      if (noinit = false) then Reinit;         {Execute init929.exe to apply new settings}
       halt(0);
     end;
 
@@ -3113,7 +3248,7 @@ end;
  writeln('No changes were made to AUTOEXEC.BAT');
  freemem(p,4000);
  SaveCfg;
- Reinit;         {Execute init929.exe to apply new settings}
+ if (noinit = false) then Reinit;         {Execute init929.exe to apply new settings}
  while iskeypressed do getkey;
  cursor(true);
 end.
