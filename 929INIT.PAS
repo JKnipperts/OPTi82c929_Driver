@@ -5,51 +5,8 @@ Low Level Initialization for Sound Cards with OPTi 82C929 and AD1848K Chipsets
 Version:    1.21
 Date   :    20.02.2019
 Author :    Jan Knipperts
-******************************************************************************
+******************************************************************************}
 
-0.7 auf 0.8:
-- Quiet Mode
-- Initialisiert mehrfach (initvalue)
-- MPU 401 wird initialisiert
-- setzt auch den input
-- Bugfix bei SB Doppelinit
-
-0.8 auf 0.9:
-- Konfigurationsdatei wird jetzt auch bei Aufruf aus einem
-  anderen Verzeichnis gefunden.
-- Unit CRT nicht mehr benîtigt.
-- CD-ROM UnterstÅtzung
-- Bugfix im SB IRQ
-
-09a auf 09b
-- Nutzt jetzt SBPro Unit;
-- Verschiedene kleine Bugfixes
-- Optionen kînnen nun in beliebiger Reihenfolge Åbergeben werden
-- Initialisierungsroutine komplett Åberarbeitet
-
-09b auf 09c
-- SB Frequenz jetzt in der cofig-Datei
-- Bug bei MPU Initialisierung behoben
-
-1.0
-- An neues config-format angepasst
-- SetVolume Åberarbeitet,
-- INFO Åberarbeitet
-
-1.1
-- Bugfix bei Sound Blaster initialisierung (Protect Shadowregs)
-- Bugfix beim Setzen von Stereo/Mono
-- Info Åberarbeitet, zeigt jetzt tatsÑchliche Frequenzen und Audioformate
-
-1.2
-- Added OPL4 support
-
-1.21
-- Added option for SB Pro filter configuration
-- Added Stereo/Mono Switch
-- Added display of init. runs
-- minor improvements of /N command (max 255 to avoid overrun)
-- Some text optimizations}
 
 
 Program OPTI929_AD1848_Driver;
@@ -125,30 +82,30 @@ begin
   textcolor(7);
   textbackground(0);
   writeln('');
-  write('⁄');
+  write('√ö');
   for xc := 2 to 79 do
   begin
     gotoxy(xc,gety);
-    write('ƒ');
+    write('√Ñ');
   end;
-  write('ø');
-  write('≥');
+  write('¬ø');
+  write('¬≥');
   gotoxy(40-(length(title) div 2),gety);
   write(title);
   gotoxy(80,gety);
-  write('≥');
-  write('≥');
+  write('¬≥');
+  write('¬≥');
   gotoxy(40-(length(copyright) div 2),gety);
   write(copyright);
   gotoxy(80,gety);
-  write('≥');
-  write('¿');
+  write('¬≥');
+  write('√Ä');
   for xc := 2 to 79 do
   begin
     gotoxy(xc,gety);
-    write('ƒ');
+    write('√Ñ');
   end;
-  write('Ÿ');
+  write('√ô');
 end;
 
 
@@ -275,13 +232,6 @@ end;
 
 
 
-
-
-
-
-
-
-
 {================================ Configuration Stuff ======================}
 
 Procedure Setcfg;
@@ -324,7 +274,7 @@ begin
   if (cfg.WSSBase <> $530) and
      (cfg.WSSBase <> $E80) and
      (cfg.WSSBase <> $F40) and
-     (cfg.WSSBase <> $604) then                {Wrong WS-Port in config file}
+     (cfg.WSSBase <> $604) then                {Unsupported WS-Port in config file?}
   begin
    writeln('');
    writeln(error[4]);
@@ -336,7 +286,7 @@ begin
      (cfg.WSSIRQ <> 9) and
      (cfg.WSSIRQ <> 10) and
      (cfg.WSSIRQ <> 11) and
-     (cfg.WSSIRQ <> $FF) then                  {Wrong WSS-IRQ in config file}
+     (cfg.WSSIRQ <> $FF) then                  {Unsupported WSS-IRQ in config file?}
   begin
    writeln('');
    writeln(error[5]);
@@ -361,7 +311,7 @@ var sb : boolean;
 begin
 sb := SBmode;
 
-SetWSSMode(cfg);   {set controller in WSS Mode}
+SetWSSMode(cfg);   {set controller to WSS Mode}
 Protect_Shadowregs(false); {Enable full access to the codec}
 
 CODEC.WSSPort := cfg.WSSBase;
@@ -481,7 +431,7 @@ end;
 
 if cfg.opl = 4 then  {Do we assume an OPL4?}
 begin
-  if not OPL4_detect then   {but we don't find one...}
+  if not OPL4_detect then   {Yes, but we don't find one...}
   begin
    cfg.opl := 3;     {Set OPL3 instead}
    SetWSSMode(cfg);   {Reset controller}
@@ -514,7 +464,7 @@ end;
 
 end;
 
-{========================== Finding files =================}
+{========================== Finding our files =================}
 Procedure GetPath;
 begin
   {Looks up its own directory to find the config file}
@@ -549,7 +499,6 @@ begin
 
  end;
 end;
-
 
 
 
@@ -741,8 +690,8 @@ begin
      SB_Speaker(false);
      SB_ResetMixer;
 
-     SB_Setvolume(DAC,left,round((volumes.dacl / 4.28)));  {Set volumes in again in SB Mixer}
-     SB_Setvolume(DAC,right,round((volumes.dacr / 4.28))); {Just to be save...}
+     SB_Setvolume(DAC,left,round((volumes.dacl / 4.28)));  {Set volumes again in the emulated SB Mixer}
+     SB_Setvolume(DAC,right,round((volumes.dacr / 4.28))); {Just to be sure the controler knows about them...}
      SB_Setvolume(CD,left,round((volumes.aux1l / 4.28)));
      SB_Setvolume(CD,right,round((volumes.aux1r / 4.28)));
      SB_Setvolume(FM,left,round((volumes.aux2l / 4.28)));
@@ -755,7 +704,7 @@ begin
 
      If cfg.sbmix = 0 then SBMixer(false);
 
-     if cfg.mpu401 = 1 then         {Set up MPU401 when it's enabled}
+     if cfg.mpu401 = 1 then         {Set up MPU401 if it's enabled in the config}
      begin
        DATAPORT := cfg.mpubase;
        COMDPORT := cfg.mpubase+1;
@@ -872,8 +821,6 @@ begin
       DSP_Reset(cfg.SBBase); {Reset DSP to be ready}
     end;
   end;
-
-
 
 
   writeln('');
