@@ -98,9 +98,14 @@ The three main files of my driver/initialisation program.
 
 ## Some Screenshots
 ### The Setup
-![Alt text](https://github.com/JKnipperts/OPTi82c929_Driver/blob/master/screen_001.png?raw=true "Title")
+![Alt text](https://github.com/JKnipperts/OPTi82c929_Driver/blob/master/screen_001.png?raw=true "Setup")
+![Alt text](https://github.com/JKnipperts/OPTi82c929_Driver/blob/master/screen_002.png?raw=true "Advanced Options")
 
 ### The Mixer
-![Alt text](https://github.com/JKnipperts/OPTi82c929_Driver/blob/master/screen_002.png?raw=true "Title")
+![Alt text](https://github.com/JKnipperts/OPTi82c929_Driver/blob/master/screen_003.png?raw=true "Mixer")
+
+### The main program for initialization
+![Alt text](https://github.com/JKnipperts/OPTi82c929_Driver/blob/master/screen_004.png?raw=true "Options of 929INIT.EXE")
+
 
 Thanks and greetings go to the community of https://dosreloaded.de  With their feedback and suggestions for improvement, they have always made me continue and improve this project. Without the support from the forum, this would probably have been just a simple attempt to initialize a soundcard with my own program.
