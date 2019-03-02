@@ -6,7 +6,13 @@
 - Revised the "Info" section.  Now the actual current frequency is read out and displayed.
 
 1.2
-- Added enhances OPL4 support
+- Added enhanced OPL4 support
+- Added option for SB Pro filter configuration
+- Added Stereo/Mono Switch
+
+1.21
+- minor improvements of /N command (max 255 to avoid overrun)
+- Some text optimizations}
 
 
 MIXER
@@ -17,7 +23,12 @@ MIXER
 
 1.11 
  - Bugfix in AD1848.PAS: Setvolume did not function properly with volume 0
- - Now values from 0 to 30 will be set correctly
+   Now values from 0 to 30 will be set correctly and audio will be muted with volume 0
+ 
+1.12
+ - Improved handling of command line options
+ - Added possibility to skip hardware detection
+ - Made some small improvements of the code}
 
 
 
@@ -41,3 +52,9 @@ SETUP
    - Two small bugfixes 
      (sometimes the textcursor disappeard on exit, 
       option "protect codes shadow registers" was not changeable in keyboard mode) 
+      
+  1.3
+   - Reorganization of the advanced options section
+   - Added new commandline options
+   - Improved WSS DMA Test and fixed a small bug in this routine
+   - Fixed bug in autoexec.bat edeting code
