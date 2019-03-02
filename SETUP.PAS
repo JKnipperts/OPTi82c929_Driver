@@ -4,23 +4,6 @@
 Version:    1.3
 Date   :    23.02.2019
 Author :    Jan Knipperts
-
-changes
-  v1.0 to 1.01: Keyboard control was added
-  v1.01 to 1.1:
-   - Bug fix: Program tries no more to load config when standard cfg was set
-   - Bug fix: MPU401 will no longer be tested when disabled
-  v1.1 to 1.2
-   - Set default values if controller detection failed
-   - Added OPL4 support
-   - Added second page of advanced options
-   - Renamed some options
-   - Some small bugfixes
-  v1.3
-   - Reorganisation of advanced options
-   - Added new commandline options
-   - Improved WSS DMA Test
-   - Fixed bug in autoexec.bat entry
 *****************************************************************************}
 
 
@@ -392,8 +375,8 @@ end;
   c := 1;
   while (name[c] = ' ') and (c <= length(name)) do inc(c);
   putchar(x+(c-1),y,name[c],4,7);
-  for c := x+1 to x+length(name) do fastwrite(c,y+1,col,1, 'ﬂ');
-  fastwrite(x+length(name),y,col,1, '‹');
+  for c := x+1 to x+length(name) do fastwrite(c,y+1,col,1, '√ü');
+  fastwrite(x+length(name),y,col,1, '√ú');
  end;
 
  Procedure Wait_for_Mousebutton;
@@ -492,30 +475,30 @@ end;
 
  end;
 
-Procedure SetDefaultcfg;
+Procedure SetDefaultcfg;   {Sets the default configuration}
 begin
  with cfg do
  begin
-  initmode    := 0;   {SB mode enabled}
-  powerdwn    := 0;   {Powerdown mode disabled}
-  silence     := 0;   {Mute off}
-  Cfix        := 1;   {We assume a Crystal codec}
-  shprotect   := 1;   {Shadow Register protection on}
+  initmode    := 0;   {Enable Sound Blaster Mode}
+  powerdwn    := 0;   {Disable Powerdown mode}
+  silence     := 0;   {Mute is disabled}
+  Cfix        := 1;   {We assume a Crystal codec because the AD codec run aslo well with this setting but the CS does not with AD's}
+  shprotect   := 1;   {Shadow Register protection is enabled}
   access      := 0;   {No access to codec in SB Mode}
   wave        := 1;
   filter      := 1;
 
-  CDTYPE      := $FF; {CD-ROM off}
-  CDBASE      := $340; {CD-ROM I/O Port}
-  CDIRQ       := $FF; {IRQ for CD-ROM}
-  CDDMA       := 3;   {DMA for CD-ROM}
+  CDTYPE      := $FF; {Disable CD-ROM}
+  CDBASE      := $340; {340h as dummy CD-ROM I/O Port}
+  CDIRQ       := $FF; {No IRQ for disabled CD-ROM}
+  CDDMA       := 3;   {Seit DMA channel 3 as dummy for disbaled CD-ROM}
 
-  SBBASE      := $220;   {SB Port}
-  SBIRQ       := 5;   {SB IRQ}
-  SBDMA       := 1;   {SB DMA}
-  SBVER       := 3;   {SB Version}
+  SBBASE      := $220;   {Set SB I/O Port to the default 220h}
+  SBIRQ       := 5;   {..IRQ 5}
+  SBDMA       := 1;   {..DMA 1}
+  SBVER       := 3;   {SB DSP Version is 3.1}
   FMAP        := 0;   {Use both crystals for SB Frequencymapping}
-  FIFO        := 1;   {Command FiFo in SB Mode on}
+  FIFO        := 1;   {Enable command FiFo in SB Mode}
   SBMIX       := 1;   {Enable Sound Blaser Mixer chip emulation}
   AUTOVOL     := 0;   {Disable Automatic volume control}
   ADPCM       := 1;   {Enable ADPCM}
@@ -526,9 +509,9 @@ begin
   WSSDMA      := 1;    {WSS playback DMA 1}
   WSSIRQ      := $FF;  {WSS Auto IRQ}
   GPEN        := 1;   {GamePort enabled}
-  GPMODE      := 1;   {Game Port Timer.  0 fÅr Extern, 1 fÅr Intern}
-  OUTMX       := 0;   {Timing mode OPL3SCn}
-  GPOUT       := 0;   {General purpose output disabled}
+  GPMODE      := 1;   {Use internal timer for Gameport}
+  OUTMX       := 0;   {Timing mode is OPL3SCn}
+  GPOUT       := 0;   {General purpose outputs are disabled}
 
   if OPL4_detect then
   begin
@@ -539,7 +522,7 @@ begin
     OPL    := 3;
   end;
 
-  FMCLK       := 3;   {OPL 3 clock}
+  FMCLK       := 3;   {Use OPL 3 clock}
 
   MPU401      := 1;   {MPU-401 enabled}
   MPUBASE     := $330; {MPU401 Port}
@@ -682,9 +665,9 @@ begin
 
  InitMenuScreen(title);
  Window(4,3,77,23,15,1,true);
- putchar(40,3,'—',15,1);
+ putchar(40,3,'√ë',15,1);
  for cnt := 4 to 19 do
- putchar(40,cnt,'≥',15,1);
+ putchar(40,cnt,'¬≥',15,1);
 
  fastwrite(9,4,14,1,'Sound Blaster configuration');
  fastwrite(9,6,15,1,'Address:');
@@ -711,7 +694,7 @@ begin
  Drawselector(58,8,WSS_DMA[wsstext.dma]);
 
  HLine(12);
- putchar(40,12,'≈',15,1);
+ putchar(40,12,'√Ö',15,1);
 
  fastwrite(9,13,14,1,'MPU401 configuration');
  fastwrite(9,15,15,1,'Enable MPU401 [ ]');
@@ -750,8 +733,8 @@ begin
 
 
  HLine(20);
- putchar(40,20,'≈',15,1);
- putchar(40,20,'¡',15,1);
+ putchar(40,20,'√Ö',15,1);
+ putchar(40,20,'√Å',15,1);
  Button(13,21,'Advanced Options',false);
  Button(34,21,'Test Settings',false);
  Button(52,21,'Save and quit',false);
@@ -1076,8 +1059,7 @@ begin
   IRQcalled := false;
   SB_Install_IRQ(irq,Addr (ServiceIRQ));
 
-  DSP_Write($D1);                {DSP-command D1h - Enable speaker, required
-                                on older SB's}
+  DSP_Write($D1);                {DSP-command D1h - Enable speaker}
   DSP_Write($40);                {DSP-command 40h - Set sample frequency}
   DSP_Write(165);                {Write time constant for 11025Hz}
 
@@ -1490,11 +1472,11 @@ begin
 
    if length(s) >= length(newblaster) then
    begin
-    for dummy := 1 to length(s) do       {Alten Eintrag lîschen}
+    for dummy := 1 to length(s) do       {Alten Eintrag l¬îschen}
     begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := 0;
     end;
-    for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfÅgen}
+    for dummy := 1 to length(newblaster) do       {Neuen Eintrag einf¬Ågen}
     begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
     end;
@@ -1507,7 +1489,7 @@ begin
    else
    begin
      move(ptr(seg(p^),ofs(p^)+bpos+length(s))^,ptr(seg(p^),ofs(p^)+bpos+length(newblaster))^,size-(bpos+length(s)));
-     for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfÅgen}
+     for dummy := 1 to length(newblaster) do       {Neuen Eintrag einf¬Ågen}
      begin
       mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
      end;
@@ -1535,7 +1517,7 @@ begin
         ptr(seg(p^),ofs(p^)+(bpos+length(newblaster)))^,
         size-bpos);
 
-   for dummy := 1 to length(newblaster) do       {Neuen Eintrag einfÅgen}
+   for dummy := 1 to length(newblaster) do       {Neuen Eintrag einf¬Ågen}
    begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(newblaster[dummy]);
    end;
@@ -1560,11 +1542,11 @@ begin
 
    if length(s) >= length(initstr) then
    begin
-    for dummy := 1 to length(s) do       {Alten Eintrag lîschen}
+    for dummy := 1 to length(s) do       {Alten Eintrag l¬îschen}
     begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := 0;
     end;
-    for dummy := 1 to length(initstr) do       {Neuen Eintrag einfÅgen}
+    for dummy := 1 to length(initstr) do       {Neuen Eintrag einf¬Ågen}
     begin
      mem[seg(p^):ofs(p^)+bpos+(dummy-1)] := ord(initstr[dummy]);
     end;
@@ -1585,7 +1567,7 @@ begin
         ptr(seg(p^),ofs(p^)+(cpos+length(initstr)))^,
         size-cpos);
 
-   for dummy := 1 to length(initstr) do       {Neuen Eintrag einfÅgen}
+   for dummy := 1 to length(initstr) do       {Neuen Eintrag einf¬Ågen}
    begin
      mem[seg(p^):ofs(p^)+cpos+(dummy-1)] := ord(initstr[dummy]);
    end;
