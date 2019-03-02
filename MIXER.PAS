@@ -8,7 +8,7 @@ Author :    Jan Knipperts
 
 
 
-Program AD1848_Mixer;
+Program OPTi929_Mixer;
 uses opti929,mpu,oplfm,opl4,
      sbpro,ad1848,bmf,dos,
      textmode,misc;
