@@ -1,3 +1,8 @@
+Changelog
+---------
+
+What I changed in the different released versions of the programs:
+
 929INIT
 1.1
 - Bugfix: Shadowregister protection must be enabled when initializing the Sound Blaster Pro mode.
@@ -7,12 +12,15 @@
 
 1.2
 - Added enhanced OPL4 support
-- Added option for SB Pro filter configuration
-- Added Stereo/Mono Switch
+- Added option for SB Pro lowpass filter configuration
+- Added Stereo/Mono commandline switch
+- Bugfix in AD1848.PAS: Setvolume did not function properly with volume 0
+  Now values from 0 to 30 will be set correctly and audio will be muted with volume 0
+- I've reworked the source code a bit 
 
 1.21
-- minor improvements of /N command (max 255 to avoid overrun)
-- Some text optimizations}
+- Minor improvement of /N command (now with a max value of 255 to avoid overrun)
+- Changes and improvements in the texts and descriptions to be output.
 
 
 MIXER
@@ -27,8 +35,8 @@ MIXER
  
 1.12
  - Improved handling of command line options
- - Added possibility to skip hardware detection
- - Made some small improvements of the code}
+ - Added possibility to skip the hardware detection
+ - I've reworked the source code a bit and improved some functions
 
 
 
@@ -42,19 +50,22 @@ SETUP
               settings are used, due to a bug the program tried to read the  
               configuration file again and crashed. 
    - Bug fix: 
-              MPU401 will no longer be tested when MPU is disabled.....
+     - MPU401 will no longer be tested when MPU is disabled.....
               
   1.2
    - Added doubble check for controller detection
    - Added enhanced OPL4 support
-   - Added more advanced options in a second screen
-   - Renamed some options to fit with their names in the datasheets
-   - Two small bugfixes 
-     (sometimes the textcursor disappeard on exit, 
-      option "protect codes shadow registers" was not changeable in keyboard mode) 
+   - Added a second page with more advanced options
+   - Renamed some options. Now the names are the same as in the data sheet.
+   - Two small bugfixes: 
+     - Sometimes the text cursor remained switched off after the end of the program.
+     - The option "protect codes shadow registers" could not be changened in keyboard mode
       
   1.3
    - Reorganization of the advanced options section
    - Added new commandline options
-   - Improved WSS DMA Test and fixed a small bug in this routine
-   - Fixed bug in autoexec.bat edeting code
+   - Improved WSS DMA Test and fixed an annoying bug:
+      - If the sound check in the mixer was previously performed or another program previously accessed WSS, 
+        the DMA test failed on the first pass. Fixed this with an additional reset of the DMA controller and 
+        counter in the codec.
+   - Improved the code for automatically entering the settings in Autoexec.bat and fixed some minor bugs. 
