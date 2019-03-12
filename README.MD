@@ -44,14 +44,16 @@ The mode of the sound card can also be easily changed from the command line.
 Allows you to adjust the volume, configure the sound card's inputs for recording, and perform a sound check.
 
 #### SBFIX
-A small, memory-resident program that forces the sound card to output in stereo in Sound Blaster mode. 
-Some games have problems with stereo output with OPTi929 soundcards, this small program can help to fix this issue.
+A small, memory-resident program that forces the sound card to output stereo sound in Sound Blaster Pro mode. 
+If your game has issues with stereo output on OPTi929 soundcards try this small program to fix it. 
 Just run it before starting the game. 
 
 ## The source code
-The driver is written in Borland Pascal with use of the inline assembler. Only SBFIX is written in pure assembly. 
-The reason why I chose Pascal for this project is that I still had old source codes for FM Sound, Sound Blaster, windows and menu control in text mode etc. So only the OPTi 82C929 and WSS stuff had to be written from scratch.
+The driver is written in Borland Pascal 7.0 and its inline assembler. Only SBFIX is written in pure assembly code (nasm). 
 
+You might wonder why I used an old-fashioned Pascal compiler?
+Quite simple: Back in the day I used to program under DOS mainly in Pascal and still have a lot of source code from that time. 
+Fast text mode menu and screen handling, Sound Blaster and OPL2/3 FM stuff, MPU routines etc. All this I already had in my old Pascal source codes and therefore I could save myself a lot of work doing this retro-project in good ol' Pascal.
 
 
 ### Low level code to interact with the hardware:
