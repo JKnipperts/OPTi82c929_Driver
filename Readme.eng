@@ -76,8 +76,9 @@ With the button "Test settings" you can try out whether the sound card works
 with the settings made or whether there are hardware conflicts.
  
 Advanced Options
-The button "Advances Options" opens another menu with settings that influence the functionality of the sound chips and especially their compatibility 
-with the Sound Blaster Pro Standard.
+The button "Advances Options" opens another menu with settings that influence 
+the functionality of the sound chips and especially their compatibility with 
+the Sound Blaster Pro Standard.
 
 Codec Selection
 Here you can select whether a codec from Crystal Semiconductor or one from 
@@ -91,8 +92,10 @@ Here you can select with which settings the codec is set up for the respective
 operating mode. This has a big impact on many games.
 If audio errors occur in games, sound effects are played back too quickly or 
 too slowly, or in too low a quality, you can adjust the sample rate here.
-While some older games programmed for the simple Sound Blaster work better with an initialization of the card in mono, newer games for the Sound Blaster Pro
-require an initialization with 22 kHz, 8 bit, stereo to output sound effects in stereo. If you encounter problems with stereo playback despite this setting,
+While some older games programmed for the simple Sound Blaster work better with 
+an initialization of the card in mono, newer games for the Sound Blaster Pro
+require an initialization with 22 kHz, 8 bit, stereo to output sound effects 
+in stereo. If you encounter problems with stereo playback despite this setting,
 please also use the SBFIX.COM included with the Sound Blaster Pro. 
 
 Crystals used for SB frequencies
@@ -115,9 +118,10 @@ Here you can select which version of a Sound Blaster DSP is shown to other
 programs.
 
 Automatic Volume Control
-Automatic volume adjustment. This option causes problems in many games and should therefore be turned off. 
-A good example for issues with this option turned on is the shot when starting the game Black Thorne. If this option is turned on, this sample will be played
-with hardly audible volume.
+Automatic volume adjustment. This option causes problems in many games and 
+should therefore be turned off. A good example for issues with this option 
+turned on is the shot when starting the game Black Thorne. If this option is 
+turned on, this sample will be played with hardly audible volume.
 
 Sound Blaster ADPCM support
 Turns support for ADPCM compressed audio data on or off. 
@@ -197,8 +201,9 @@ outputs the current setting of the sound controller.
 
 "/Q" and "/N" 
 are additional options: 
-"/Q" reduces the text output to a minimum (e.g. for starting from Autoexec.bat) and 
-"/N" allows several initializations in a row.
+"/Q" reduces the text output to a minimum 
+     (e.g. for starting from Autoexec.bat)
+"/N" allows several initializations in a row
 
 The operation from the command line allows to create batch files for single 
 games or programs. For example, if the card is normally operated in 
@@ -206,8 +211,8 @@ Sound Blaster mode and is only to be set to Windows Sound System mode
 for a few games and then to Sound Blaster mode again at the end of the game, or
 if individual games require an initialization in stereo or mono.
 
-Example fo a batch file to run Tyrian in WSS mode and then switch back
-to SB mode:
+Example for a batch file to run the game Tyrian in WSS mode and then
+switch back to Sound Blaster mode:
 
 @ECHO OFF
 C:\SOUND\929INIT.EXE /WSS /Q
@@ -259,8 +264,9 @@ That's it. Installation is done.
 
 SOURCE CODE
 -----------
-The complete source code for the programs contained here has been made available for free (under MIT license) and can be viewed and downloaded at 
-https://github.com/JKnipperts/OPTi82c929_Driver.
+The complete source code for the programs contained here has been made available 
+for free (under MIT license) and can be viewed and downloaded at 
+https://github.com/JKnipperts/OPTi82c929_Driver
 
 DISCLAIMER
 ----------
