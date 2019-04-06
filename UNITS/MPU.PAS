@@ -4,7 +4,7 @@ Unit MPU;
 
 interface
 
-uses dos, crt, misc;
+uses dos, misc;
 
 var
     COMDPORT : word; { MPU-401 Command Port) }
