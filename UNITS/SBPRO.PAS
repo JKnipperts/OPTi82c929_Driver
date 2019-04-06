@@ -4,7 +4,7 @@ Unit SBPro;
 v 0.4 (c) 2001 by Jan Knipperts}
 
 interface
-uses misc,dos,crt;
+uses misc,dos;
 
 
  const
